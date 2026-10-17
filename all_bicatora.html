@@ -178,9 +178,9 @@ import{initializeApp}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-ap
 import{getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import{getFirestore,collection,doc,setDoc,deleteDoc,onSnapshot}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 // 1) Pega aquí los datos de tu proyecto de Firebase
-const FIREBASE_CONFIG={apiKey:"PEGA_AQUI",authDomain:"PEGA_AQUI",projectId:"PEGA_AQUI",appId:"PEGA_AQUI"};
+const FIREBASE_CONFIG={apiKey:"AIzaSyDRLPdNREzPJM0DN2OuGfiwYlZtzCVBbu0",authDomain:"all-bitacora.firebaseapp.com",projectId:"all-bitacora",appId:"1:327197443289:web:4d44415ad6a517da31aac8"};
 // 2) El correo del usuario que creaste en Firebase (la contraseña NO va en el código)
-const EMAIL="PEGA_AQUI_TU_CORREO";
+const EMAIL="barbosagalanyg@gmail.com";
 const app=initializeApp(FIREBASE_CONFIG),auth=getAuth(app),fs=getFirestore(app);
 let uid=null,unsub=null,first=true;
 const ref=(s,d)=>doc(fs,'users',uid,'entries',s+'_'+d);
