@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mi bitácora</title>
+<style>
+:root{--bg:#eceff3;--cd:#fff;--tx:#17212b;--mu:#5d6b79;--bd:#d3d9e0;--ac:#3b4cca;--on:#fff;--ef:#dfe4ea}
+@media(prefers-color-scheme:dark){:root{--bg:#0f141a;--cd:#171f27;--tx:#e6ebf0;--mu:#8fa0b0;--bd:#2a3541;--ac:#8c9bff;--on:#0f141a;--ef:#222c36}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:980px;margin:0 auto;padding:18px 14px 48px}
+h1{font:600 1.7rem/1.2 "Iowan Old Style",Georgia,serif;margin:6px 0 16px}
+h3{font:600 1.1rem Georgia,serif;margin:22px 0 8px}
+.card{background:var(--cd);border:1px solid var(--bd);border-radius:6px;padding:16px;margin-top:14px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+button,input,textarea{font:inherit;color:var(--tx)}
+.tabs button,.btn{border:1px solid var(--bd);background:var(--cd);padding:8px 16px;border-radius:6px;cursor:pointer}
+.tabs button.on,.btn.pri{background:var(--ac);border-color:var(--ac);color:var(--on)}
+:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+.nav{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:14px}
+.nav strong{text-transform:capitalize;text-align:center}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.stat{flex:1;min-width:130px;border-left:4px solid var(--ac);padding:2px 10px}
+.stat span{display:block;color:var(--mu);font-size:.85rem}
+.stat b{font-size:1.35rem}
+.mu{color:var(--mu);font-size:.9rem}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+label{display:block;margin-top:12px;font-weight:600}
+input[type=time],input[type=date],input[type=password],textarea{display:block;width:100%;margin-top:4px;padding:9px;border:1px solid var(--bd);border-radius:6px;background:var(--bg)}
+.row label{flex:1;min-width:140px}
+#lv{font:600 1.3rem Georgia,serif;margin:14px 0 0}
+.sc{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;margin:6px 0}
+.sc button{border:0;border-radius:4px;padding:12px 0;font-weight:700;cursor:pointer}
+.sc button.on{box-shadow:0 0 0 3px var(--tx)}
+.acts{display:flex;gap:8px;margin-top:14px}
+.nt{padding:10px 0;border-top:1px solid var(--bd);cursor:pointer;white-space:pre-wrap}
+.ch{width:100%;height:auto;margin-bottom:16px}
+.ch text{fill:var(--mu);font-size:10px}
+.grid{display:grid;gap:3px}
+.grid.w{grid-template-columns:repeat(7,1fr);gap:4px}
+.grid.y{grid-template-rows:repeat(7,16px);grid-auto-flow:column;grid-auto-columns:16px}
+.dh{text-align:center;color:var(--mu);font-size:.85rem}
+.cell{background:var(--ef);border-radius:3px;cursor:pointer;min-height:16px}
+.big{min-height:54px;padding:3px 5px;font-size:.85rem;font-weight:600}
+.big small{display:block;font-weight:400;opacity:.8}
+.e{display:block}
+.hy{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px}
+.dl{display:grid;grid-template-rows:repeat(7,16px);gap:3px;font-size:10px;line-height:16px;color:var(--mu)}
+.foot{margin-top:22px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.lock #app,.lock .foot{display:none}
+#lg{display:none;max-width:360px}
+.lock #lg{display:block}
+</style>
+</head>
+<body class="lock">
+<main>
+<h1>Mi bitácora</h1>
+<form id="lg" onsubmit="event.preventDefault();cloud.login(this.p.value)"><label>Contraseña<input type="password" name="p" autocomplete="current-password" required></label><p id="lgerr" class="mu"></p><div class="acts"><button class="btn pri">Entrar</button></div></form>
+<div id="app"></div>
+<div class="foot">
+<button class="btn" onclick="exp()">Exportar datos</button>
+<button class="btn" onclick="document.getElementById('imp').click()">Importar datos</button>
+<input type="file" id="imp" accept=".json" hidden onchange="imp(this.files[0])">
+<button class="btn" onclick="cloud.out()">Cerrar sesión</button>
+<span class="mu">Tus datos se guardan en la nube y se sincronizan entre dispositivos. Exportar sirve como copia de seguridad.</span>
+</div>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+const pad=n=>String(n).padStart(2,'0');
+const iso=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const P=s=>new Date(s+'T12:00:00');
+const add=(s,n)=>{const d=P(s);d.setDate(d.getDate()+n);return iso(d)};
+const mon=s=>add(s,-((P(s).getDay()+6)%7));
+const fs=s=>P(s).toLocaleDateString('es',{day:'numeric',month:'short'});
+const MS=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const DL=[...'LMXJVSD'];
+const esc=t=>t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const CFG={
+ sleep:{name:'Sueño',lo:6,mid:7.5,hi:9,max:12,ideal:9,ticks:[0,3,6,9,12]},
+ food:{name:'Alimentación',lo:1,mid:5,hi:10,max:10,ideal:10,ticks:[0,2,4,6,8,10]}
+};
+let db={sleep:{},food:{}};
+try{const d=JSON.parse(localStorage.getItem('bitacora'));if(d)db={sleep:d.sleep||{},food:d.food||{}}}catch(e){}
+const persist=()=>{try{localStorage.setItem('bitacora',JSON.stringify(db))}catch(e){alert('No se pudo guardar en este navegador')}};
+let st={sec:'sleep',view:'day',date:iso(new Date()),score:null};
+
+const tm=t=>{const[a,b]=t.split(':');return +a*60+ +b};
+function val(s,d){const e=db[s][d];if(!e)return null;if(s=='food')return e.score;if(!e.bed||!e.wake)return null;return((tm(e.wake)-tm(e.bed)+1440)%1440)/60}
+function col(s,v){const c=CFG[s];let t=v<=c.mid?.5*(v-c.lo)/(c.mid-c.lo):.5+.5*(v-c.mid)/(c.hi-c.mid);t=Math.max(0,Math.min(1,t));
+ const A=[211,47,47],B=[253,216,53],C=[27,94,32],[x,y,u]=t<.5?[A,B,t*2]:[B,C,(t-.5)*2];
+ return{c:'rgb('+x.map((k,i)=>Math.round(k+(y[i]-k)*u)).join()+')',f:t>.25&&t<.75?'#222':'#fff'}}
+const hm=v=>{const m=Math.round(v*60);return Math.floor(m/60)+'h '+pad(m%60)+'m'};
+const r1=v=>Math.round(v*10)/10;
+const fmt=v=>v==null?'—':st.sec=='sleep'?hm(v):r1(v)+' / 10';
+const sh=v=>st.sec=='sleep'?r1(v)+'h':v;
+
+function weekDays(s){const m=mon(s);return[...Array(7)].map((_,i)=>add(m,i))}
+function weeksOf(y,m){ // m = mes (0-11) o null para el año completo
+ const a=m==null?new Date(y,0,1):new Date(y,m,1),z=iso(m==null?new Date(y,11,31):new Date(y,m+1,0)),o=[];
+ let w=mon(iso(a));
+ while(w<=z){o.push([...Array(7)].map((_,i)=>{const x=add(w,i);return(m==null?+x.slice(0,4)==y:+x.slice(5,7)==m+1&&+x.slice(0,4)==y)?x:null}));w=add(w,7)}
+ return o}
+function days(){const d=P(st.date),y=d.getFullYear(),m=d.getMonth();
+ if(st.view=='week')return weekDays(st.date);
+ if(st.view=='month')return weeksOf(y,m).flat().filter(Boolean);
+ return weeksOf(y,null).flat().filter(Boolean)}
+function avg(l){const v=l.map(x=>val(st.sec,x)).filter(x=>x!=null);return{a:v.length?v.reduce((p,q)=>p+q,0)/v.length:null,n:v.length}}
+
+function nav(n){const d=P(st.date),v=st.view;
+ if(v=='day')d.setDate(d.getDate()+n);
+ else if(v=='week')d.setDate(d.getDate()+7*n);
+ else if(v=='month'){d.setDate(1);d.setMonth(d.getMonth()+n)}
+ else{d.setDate(1);d.setFullYear(d.getFullYear()+n)}
+ st.date=iso(d);render()}
+function label(){const d=P(st.date),v=st.view;
+ if(v=='day')return d.toLocaleDateString('es',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+ if(v=='week'){const w=weekDays(st.date);return fs(w[0])+' – '+fs(w[6])+' '+P(w[6]).getFullYear()}
+ if(v=='month')return d.toLocaleDateString('es',{month:'long',year:'numeric'});
+ return''+d.getFullYear()}
+const go=d=>{st.date=d;st.view='day';render()};
+
+function render(){
+ let h='<div class="tabs">'+Object.keys(CFG).map(k=>`<button class="${k==st.sec?'on':''}" onclick="st.sec='${k}';render()">${CFG[k].name}</button>`).join('')+'</div>';
+ h+='<div class="tabs" style="margin-top:8px">'+[['day','Día'],['week','Semana'],['month','Mes'],['year','Año']].map(([k,l])=>`<button class="${k==st.view?'on':''}" onclick="st.view='${k}';render()">${l}</button>`).join('')+'</div>';
+ h+='<div class="card"><div class="nav"><button class="btn" aria-label="Anterior" onclick="nav(-1)">‹</button><strong>'+label()+'</strong><button class="btn" aria-label="Siguiente" onclick="nav(1)">›</button></div>';
+ h+=st.view=='day'?dayView():periodView();
+ $('#app').innerHTML=h+'</div>';
+ if(st.view=='day'&&st.sec=='sleep')live()}
+
+function dayView(){const s=st.sec,e=db[s][st.date]||{};st.score=e.score||null;
+ let h=`<input type="date" aria-label="Ir a una fecha" value="${st.date}" onchange="if(this.value){st.date=this.value;render()}">`;
+ if(s=='sleep')h+=`<div class="row"><label>Me acosté<input type="time" id="bed" value="${e.bed||'23:00'}" oninput="live()"></label><label>Me desperté<input type="time" id="wake" value="${e.wake||'07:00'}" oninput="live()"></label></div><p id="lv"></p><p class="mu" style="margin:0">La fecha es el día en que despertaste.</p>`;
+ else h+=`<label>Calificación del día</label><div class="sc">${[...Array(10)].map((_,i)=>{const k=col('food',i+1);return`<button class="${st.score==i+1?'on':''}" style="background:${k.c};color:${k.f}" onclick="pick(${i+1})">${i+1}</button>`}).join('')}</div><p class="mu" style="margin:0">1 = solo ultraprocesados y azúcar. 10 = nada de eso.</p>`;
+ h+=`<label>${s=='sleep'?'¿Cómo estuvo el sueño?':'Notas sobre lo que comiste'}<textarea id="note" rows="3">${esc(e.note||'')}</textarea></label>`;
+ h+=`<div class="acts"><button class="btn pri" onclick="saveE()">Guardar</button>${db[s][st.date]?'<button class="btn" onclick="del()">Borrar</button>':''}</div>`;
+ const rec=Object.entries(db[s]).filter(([d,x])=>x.note).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,10);
+ return h+'<h3>Notas recientes</h3>'+(rec.length?rec.map(([d,x])=>`<div class="nt" onclick="go('${d}')"><b>${fs(d)}</b>: ${fmt(val(s,d))}<br>${esc(x.note)}</div>`).join(''):'<p class="mu">Aún no hay notas. Guarda un día con nota y aparecerá aquí.</p>')}
+
+function live(){const b=$('#bed'),w=$('#wake');if(!b||!w||!b.value||!w.value)return;
+ const v=((tm(w.value)-tm(b.value)+1440)%1440)/60;
+ $('#lv').textContent=hm(v)+' de sueño'+(v<9?' · faltan '+hm(9-v)+' para la meta':' · meta cumplida')}
+function pick(n){st.score=n;document.querySelectorAll('.sc button').forEach((b,i)=>b.classList.toggle('on',i+1==n))}
+function saveE(){const s=st.sec,e={note:$('#note').value.trim()};
+ if(s=='sleep'){e.bed=$('#bed').value;e.wake=$('#wake').value;if(!e.bed||!e.wake)return alert('Completa la hora de acostarte y la de despertar.')}
+ else{if(!st.score)return alert('Elige una calificación del 1 al 10.');e.score=st.score}
+ db[s][st.date]=e;persist();render();window.cloud&&cloud.save(s,st.date,e)}
+function del(){const s=st.sec,d=st.date;delete db[s][d];persist();render();window.cloud&&cloud.del(s,d)}
+
+function cell(x,big){if(!x)return'<i class="e"></i>';const v=val(st.sec,x),k=v==null?null:col(st.sec,v);
+ return`<div class="cell${big?' big':''}"${k?` style="background:${k.c};color:${k.f}"`:''} title="${x}: ${v==null?'sin datos':fmt(v)}" onclick="go('${x}')">${big?`<small>${+x.slice(8)}</small>${v==null?'':sh(v)}`:''}</div>`}
+function heat(ws,year){
+ if(year)return'<div class="hy"><div class="dl">'+DL.map(d=>`<span>${d}</span>`).join('')+'</div><div class="grid y">'+ws.flat().map(x=>cell(x)).join('')+'</div></div>';
+ return'<div class="grid w">'+DL.map(d=>`<span class="dh">${d}</span>`).join('')+ws.flat().map(x=>cell(x,1)).join('')+'</div>'}
+function chart(it){const c=CFG[st.sec],W=600,H=230,L=30,T=14,B=24,n=it.length,bw=(W-L)/n,y=v=>T+(H-T-B)*(1-Math.min(v,c.max)/c.max);
+ let s=`<svg viewBox="0 0 ${W} ${H}" class="ch" role="img" aria-label="Gráfica">`;
+ for(const t of c.ticks)s+=`<line x1="${L}" x2="${W}" y1="${y(t)}" y2="${y(t)}" stroke="var(--bd)"/><text x="${L-5}" y="${y(t)+3}" text-anchor="end">${t}</text>`;
+ it.forEach((o,i)=>{const x=L+i*bw;
+  if(o.v!=null){s+=`<rect x="${x+bw*.15}" y="${y(o.v)}" width="${bw*.7}" height="${y(0)-y(o.v)}" rx="2" fill="${col(st.sec,o.v).c}"${o.d?` onclick="go('${o.d}')" style="cursor:pointer"`:''}><title>${o.l}: ${fmt(o.v)}</title></rect>`;
+   if(n<=12)s+=`<text x="${x+bw/2}" y="${y(o.v)-3}" text-anchor="middle">${r1(o.v)}</text>`}
+  if(n<=12||i==0||(i+1)%5==0)s+=`<text x="${x+bw/2}" y="${H-7}" text-anchor="middle">${o.l}</text>`});
+ return s+`<line x1="${L}" x2="${W}" y1="${y(c.ideal)}" y2="${y(c.ideal)}" stroke="var(--ac)" stroke-width="2" stroke-dasharray="5 4"/></svg>`}
+
+function periodView(){const v=st.view,L=days(),r=avg(L),d=P(st.date),y=d.getFullYear();
+ const nm={week:'de la semana',month:'del mes',year:'del año'}[v];
+ const it=v=='year'?MS.map((l,i)=>({l,v:avg(L.filter(x=>+x.slice(5,7)==i+1)).a})):L.map((x,i)=>({l:v=='week'?DL[i]:+x.slice(8),v:val(st.sec,x),d:x}));
+ const ws=v=='week'?[weekDays(st.date)]:weeksOf(y,v=='month'?d.getMonth():null);
+ return`<div class="stats"><div class="stat"><span>Promedio ${nm}</span><b>${fmt(r.a)}</b></div><div class="stat"><span>Días registrados</span><b>${r.n} de ${L.length}</b></div><div class="stat"><span>Meta</span><b>${st.sec=='sleep'?'9h':'10 / 10'}</b></div></div>`
+ +(v=='year'?'<p class="mu">Gráfica: promedio de cada mes. La línea punteada es la meta.</p>':'<p class="mu">La línea punteada es la meta.</p>')+chart(it)+heat(ws,v=='year')+'<p class="mu">Toca un día para ver o editar su registro.</p>'}
+
+function exp(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(db)],{type:'application/json'}));a.download='bitacora-'+iso(new Date())+'.json';a.click()}
+function imp(f){if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);db.sleep={...db.sleep,...d.sleep};db.food={...db.food,...d.food};persist();render();window.cloud&&cloud.push()}catch(e){alert('El archivo no es válido.')}};r.readAsText(f)}
+render();
+</script>
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import{getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import{getFirestore,collection,doc,setDoc,deleteDoc,onSnapshot}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+// 1) Pega aquí los datos de tu proyecto de Firebase
+const FIREBASE_CONFIG={apiKey:"PEGA_AQUI",authDomain:"PEGA_AQUI",projectId:"PEGA_AQUI",appId:"PEGA_AQUI"};
+// 2) El correo del usuario que creaste en Firebase (la contraseña NO va en el código)
+const EMAIL="PEGA_AQUI_TU_CORREO";
+const app=initializeApp(FIREBASE_CONFIG),auth=getAuth(app),fs=getFirestore(app);
+let uid=null,unsub=null,first=true;
+const ref=(s,d)=>doc(fs,'users',uid,'entries',s+'_'+d);
+const put=(s,d,e)=>setDoc(ref(s,d),{sec:s,date:d,e}).catch(()=>{});
+window.cloud={
+ save:(s,d,e)=>{if(uid)put(s,d,e)},
+ del:(s,d)=>{if(uid)deleteDoc(ref(s,d)).catch(()=>{})},
+ push:()=>{if(uid)for(const s of['sleep','food'])for(const d in db[s])put(s,d,db[s][d])},
+ login:async p=>{document.getElementById('lgerr').textContent='';try{await signInWithEmailAndPassword(auth,EMAIL,p)}catch(e){document.getElementById('lgerr').textContent='Contraseña incorrecta o sin conexión.'}},
+ out:()=>signOut(auth)
+};
+onAuthStateChanged(auth,u=>{
+ uid=u?u.uid:null;document.body.classList.toggle('lock',!u);
+ if(unsub){unsub();unsub=null}
+ if(!u)return;first=true;
+ unsub=onSnapshot(collection(fs,'users',uid,'entries'),snap=>{
+  const c={sleep:{},food:{}};
+  snap.forEach(x=>{const v=x.data();if(c[v.sec])c[v.sec][v.date]=v.e});
+  if(first){first=false;for(const s of['sleep','food'])for(const d in db[s])if(!c[s][d]){c[s][d]=db[s][d];put(s,d,db[s][d])}}
+  db.sleep=c.sleep;db.food=c.food;persist();
+  const a=document.activeElement;if(!a||!/^(TEXTAREA|INPUT)$/.test(a.tagName))render();
+ });
+});
+</script>
+</body>
+</html>
