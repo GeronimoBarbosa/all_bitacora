@@ -4,17 +4,21 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Mi bitácora</title>
+<script>try{var _t=localStorage.getItem('bit_theme');if(_t)document.documentElement.dataset.theme=_t}catch(e){}</script>
 <style>
-:root{--bg:#eceff3;--cd:#fff;--tx:#17212b;--mu:#5d6b79;--bd:#d3d9e0;--ac:#3b4cca;--on:#fff;--ef:#dfe4ea}
-@media(prefers-color-scheme:dark){:root{--bg:#0f141a;--cd:#171f27;--tx:#e6ebf0;--mu:#8fa0b0;--bd:#2a3541;--ac:#8c9bff;--on:#0f141a;--ef:#222c36}}
+:root{--bg:#eceff3;--cd:#fff;--tx:#17212b;--mu:#5d6b79;--bd:#d3d9e0;--ac:#3b4cca;--on:#fff;--ef:#dfe4ea;--k-cole:#3b4cca;--k-comida:#d9822b;--k-ejer:#2f9e44;--k-desc:#8e5fd6;--k-otro:#7d8a97;--ok:#1b7a2e;color-scheme:light}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0f141a;--cd:#171f27;--tx:#e6ebf0;--mu:#8fa0b0;--bd:#2a3541;--ac:#8c9bff;--on:#0f141a;--ef:#222c36;--k-cole:#8c9bff;--k-comida:#f0a24a;--k-ejer:#5fd17a;--k-desc:#b996f0;--k-otro:#9aa7b4;--ok:#6fd187;color-scheme:dark}}
+:root[data-theme=dark]{--bg:#0f141a;--cd:#171f27;--tx:#e6ebf0;--mu:#8fa0b0;--bd:#2a3541;--ac:#8c9bff;--on:#0f141a;--ef:#222c36;--k-cole:#8c9bff;--k-comida:#f0a24a;--k-ejer:#5fd17a;--k-desc:#b996f0;--k-otro:#9aa7b4;--ok:#6fd187;color-scheme:dark}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
 main{max-width:980px;margin:0 auto;padding:18px 14px 48px}
 h1{font:600 1.7rem/1.2 "Iowan Old Style",Georgia,serif;margin:6px 0 16px}
 h3{font:600 1.1rem Georgia,serif;margin:22px 0 8px}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
 .card{background:var(--cd);border:1px solid var(--bd);border-radius:6px;padding:16px;margin-top:14px}
 .tabs{display:flex;gap:6px;flex-wrap:wrap}
-button,input,textarea{font:inherit;color:var(--tx)}
+button,input,textarea,select{font:inherit;color:var(--tx)}
 .tabs button,.btn{border:1px solid var(--bd);background:var(--cd);padding:8px 16px;border-radius:6px;cursor:pointer}
 .tabs button.on,.btn.pri{background:var(--ac);border-color:var(--ac);color:var(--on)}
 :focus-visible{outline:3px solid var(--ac);outline-offset:2px}
@@ -25,15 +29,18 @@ button,input,textarea{font:inherit;color:var(--tx)}
 .stat span{display:block;color:var(--mu);font-size:.85rem}
 .stat b{font-size:1.35rem}
 .mu{color:var(--mu);font-size:.9rem}
+.ok{color:var(--ok);font-weight:600}
 .row{display:flex;gap:12px;flex-wrap:wrap}
 label{display:block;margin-top:12px;font-weight:600}
-input[type=time],input[type=date],input[type=password],textarea{display:block;width:100%;margin-top:4px;padding:9px;border:1px solid var(--bd);border-radius:6px;background:var(--bg)}
+input[type=time],input[type=date],input[type=password],input[type=text],input[type=number],select,textarea{display:block;width:100%;margin-top:4px;padding:9px;border:1px solid var(--bd);border-radius:6px;background:var(--bg)}
 .row label{flex:1;min-width:140px}
-#lv{font:600 1.3rem Georgia,serif;margin:14px 0 0}
+#lv,#clv{font:600 1.3rem Georgia,serif;margin:14px 0 0}
+#clv{font-size:1.1rem;min-height:1.5em}
 .sc{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;margin:6px 0}
 .sc button{border:0;border-radius:4px;padding:12px 0;font-weight:700;cursor:pointer}
 .sc button.on{box-shadow:0 0 0 3px var(--tx)}
 .acts{display:flex;gap:8px;margin-top:14px}
+.acts .lg{flex:1;padding:14px 16px;font-weight:600}
 .nt{padding:10px 0;border-top:1px solid var(--bd);cursor:pointer;white-space:pre-wrap}
 .ch{width:100%;height:auto;margin-bottom:16px}
 .ch text{fill:var(--mu);font-size:10px}
@@ -51,11 +58,73 @@ input[type=time],input[type=date],input[type=password],textarea{display:block;wi
 .lock #app,.lock .foot{display:none}
 #lg{display:none;max-width:360px}
 .lock #lg{display:block}
+/* ---- chips, interruptor, ánimo ---- */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.chp{border:1px solid var(--bd);background:var(--cd);padding:10px 14px;border-radius:999px;cursor:pointer}
+.chp.on{background:var(--ac);border-color:var(--ac);color:var(--on)}
+.sw{display:flex;align-items:center;gap:12px;cursor:pointer;margin-top:18px;padding:12px;border:1px solid var(--bd);border-radius:6px;background:var(--bg)}
+.sw input{appearance:none;-webkit-appearance:none;width:52px;height:30px;border-radius:15px;background:var(--bd);position:relative;flex:none;cursor:pointer;margin:0}
+.sw input::after{content:'';position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:var(--cd);transition:left .15s}
+.sw input:checked{background:var(--ac)}
+.sw input:checked::after{left:25px}
+.eb{display:grid;grid-template-columns:96px 1fr 28px;gap:8px;align-items:center;margin:4px 0}
+.eb div{background:var(--ef);border-radius:4px;height:14px}
+.eb i{display:block;height:100%;background:var(--ac);border-radius:4px}
+.eb b{text-align:right}
+/* ---- calendario ---- */
+.dbar{position:relative;height:18px;background:var(--ef);border-radius:4px;overflow:hidden;margin:10px 0 2px}
+.dbar i{position:absolute;top:0;bottom:0;background:var(--cc)}
+.dax{display:flex;justify-content:space-between;color:var(--mu);font-size:.75rem;margin-bottom:6px}
+.blk{border:1px solid var(--bd);border-left:6px solid var(--cc);border-radius:6px;background:var(--cd);margin-top:8px}
+.bm{display:flex;align-items:stretch;gap:6px}
+.bt{flex:1;min-width:0;padding:10px 4px 10px 10px;cursor:pointer}
+.bh{color:var(--mu);font-size:.85rem}
+.bn{font-weight:600;overflow-wrap:anywhere}
+.ba{display:flex;gap:6px;padding:6px}
+.ib{width:60px;min-height:52px;border:1px solid var(--bd);background:var(--bg);border-radius:6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15;padding:2px}
+.ib b{font-size:1.25rem}
+.ib small{font-size:.68rem;color:var(--mu)}
+.ib.ok{background:var(--ac);border-color:var(--ac)}
+.ib.ok b,.ib.ok small{color:var(--on)}
+.bdg{display:inline-block;font-size:.72rem;font-weight:400;padding:1px 8px;border-radius:10px;background:var(--ef);color:var(--mu);margin-left:6px}
+.s-hecho .bn{text-decoration:line-through;opacity:.6}
+.s-nohecho{opacity:.7;border-style:dashed;border-left-style:solid}
+.wr{color:#c2410c}
+.pn{border-top:1px solid var(--bd);padding:2px 12px 14px}
+.stp{display:flex;gap:6px;align-items:center;margin-top:4px}
+.stp .btn{padding:10px 12px}
+.stp input{text-align:center;margin:0}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}
+.seg button{border:1px solid var(--bd);background:var(--cd);padding:12px 2px;border-radius:6px;font-size:.85rem;cursor:pointer}
+.seg button.on{background:var(--ac);border-color:var(--ac);color:var(--on)}
+.gap{margin-top:8px;padding:10px;border:1px dashed var(--bd);border-radius:6px;color:var(--mu);font-size:.85rem;text-align:center;cursor:pointer}
+.pr{margin-bottom:6px}
+/* ---- diario ---- */
+.de{padding:12px 0;border-top:1px solid var(--bd)}
+.dh2{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+.dh2 b{text-transform:capitalize}
+.bg{padding:2px 10px;border-radius:10px;font-size:.85rem;font-weight:600}
+.tg{display:inline-block;background:var(--ef);color:var(--mu);border-radius:10px;padding:1px 9px;font-size:.8rem;margin:4px 4px 0 0}
+.dt{white-space:pre-wrap;margin:8px 0}
+/* ---- cruces ---- */
+.xc{touch-action:pan-y;cursor:crosshair}
+.xc2{display:inline-flex;border:1px solid var(--bd);border-radius:999px;overflow:hidden;background:var(--cd)}
+.xc2 button{border:0;background:none;cursor:pointer;padding:10px 12px;display:flex;align-items:center;gap:7px}
+.xc2 .xa i{width:12px;height:12px;border-radius:50%;background:var(--cc)}
+.xc2.off .xa{opacity:.5}
+.xc2.off .xa i{background:transparent;box-shadow:inset 0 0 0 2px var(--cc)}
+.xc2 .xb{border-left:1px solid var(--bd);color:var(--mu)}
+.xc2.hi .xb{background:var(--cc);color:#fff}
+.xtip{display:flex;flex-wrap:wrap;gap:4px 14px;min-height:48px;margin:4px 0 12px;font-size:.9rem}
+.xtip>b{flex-basis:100%}
+.xtip span{display:inline-flex;align-items:center;gap:5px}
+.xtip i{width:10px;height:10px;border-radius:50%;display:inline-block}
+@media(max-width:420px){.tabs button{padding:8px 11px}.ib{width:56px}}
 </style>
 </head>
 <body class="lock">
 <main>
-<h1>Mi bitácora</h1>
+<div class="top"><h1>Mi bitácora</h1><button class="btn" id="th" onclick="theme()" aria-label="Cambiar entre modo claro y oscuro"></button></div>
 <form id="lg" onsubmit="event.preventDefault();cloud.login(this.p.value)"><label>Contraseña<input type="password" name="p" autocomplete="current-password" required></label><p id="lgerr" class="mu"></p><div class="acts"><button class="btn pri">Entrar</button></div></form>
 <div id="app"></div>
 <div class="foot">
@@ -77,24 +146,124 @@ const fs=s=>P(s).toLocaleDateString('es',{day:'numeric',month:'short'});
 const MS=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 const DL=[...'LMXJVSD'];
 const esc=t=>t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const qa=t=>esc(String(t==null?'':t)).replace(/"/g,'&quot;');
+
+/* =====================================================================
+   CONFIGURACIÓN DE HORARIOS — edita aquí sin tocar el resto del código
+   Cada bloque de la plantilla: [título, inicio 'HH:MM', minutos, categoría]
+   Categorías: cole (colegio/proyectos) · comida · ejer (ejercicio) · desc (descanso) · otro
+   Los bloques cuyo título contiene "Imprevisto" no cuentan en el % de cumplimiento.
+   ===================================================================== */
+const _COL=[ // madrugada + colegio (lunes a viernes), con 2 bloques de imprevistos de 1 hora
+ ['Levantarme y alistarme','03:50',30,'otro'],
+ ['Comida','04:20',25,'comida'],
+ ['Salir de casa · viaje al colegio','04:45',105,'otro'],
+ ['Colegio','06:30',240,'cole'],
+ ['Imprevistos','10:30',60,'otro'],
+ ['Colegio','11:30',165,'cole'],
+ ['Imprevistos','14:15',60,'otro']
+];
+const _LMJ=[..._COL, // lunes, miércoles, jueves
+ ['Viaje a casa','15:15',120,'otro'],
+ ['Entrenamiento (opcional)','17:30',30,'ejer'],
+ ['Cena','18:00',30,'comida'],
+ ['Aseo y cierre del día','18:30',30,'otro'],
+ ['Acostarme','19:00',15,'desc']
+];
+const HORARIOS={
+ inicioDia:'03:50',  // el calendario empieza aquí
+ finDia:'21:00',     // y termina aquí
+ metaSueno:9,        // horas de sueño ideal
+ moverMin:30,        // minutos que mueve el botón "Más tarde"
+ // hora de levantarte por día (0 = domingo, 1 = lunes ... 6 = sábado)
+ despertar:{0:'07:00',1:'03:50',2:'03:50',3:'03:50',4:'03:50',5:'03:50',6:'07:00'},
+ plantilla:{
+  1:_LMJ,
+  2:[..._COL, // martes (Sena)
+   ['Sena','15:15',105,'cole'],
+   ['Viaje a casa','17:00',120,'otro'],
+   ['Cena','19:00',30,'comida'],
+   ['Aseo y cierre del día','19:30',30,'otro'],
+   ['Acostarme','20:00',15,'desc']],
+  3:_LMJ,
+  4:_LMJ,
+  5:[..._COL, // viernes
+   ['Fútbol con amigos','15:15',135,'ejer'],
+   ['Viaje a casa','17:30',60,'otro'],
+   ['Cena','18:30',30,'comida'],
+   ['Descanso','19:00',60,'desc'],
+   ['Aseo y cierre del día','20:00',30,'otro'],
+   ['Acostarme','20:30',15,'desc']],
+  6:[ // sábado
+   ['Levantarme','07:00',30,'otro'],
+   ['Desayuno','07:30',30,'comida'],
+   ['Descanso','08:00',150,'desc'],
+   ['Imprevistos','10:30',60,'otro'],
+   ['Descanso','11:30',120,'desc'],
+   ['Almuerzo','13:30',45,'comida'],
+   ['Descanso','14:15',105,'desc'],
+   ['Imprevistos','16:00',60,'otro'],
+   ['Descanso','17:00',60,'desc'],
+   ['Cena','18:00',45,'comida'],
+   ['Aseo y cierre del día','19:00',60,'otro'],
+   ['Acostarme','20:00',15,'desc']],
+  0:[ // domingo
+   ['Levantarme','07:00',30,'otro'],
+   ['Desayuno','07:30',30,'comida'],
+   ['Entrenamiento (opcional)','09:00',75,'ejer'],
+   ['Imprevistos','10:30',60,'otro'],
+   ['Descanso','11:30',120,'desc'],
+   ['Almuerzo','13:30',45,'comida'],
+   ['Descanso','14:15',105,'desc'],
+   ['Imprevistos','16:00',60,'otro'],
+   ['Descanso','17:00',60,'desc'],
+   ['Cena','18:00',45,'comida'],
+   ['Aseo y cierre del día','19:00',60,'otro'],
+   ['Acostarme','20:00',15,'desc']]
+ }
+};
+const EMO=['tranquilo','feliz','motivado','realizado','agradecido','pensativo','cansado','estresado','ansioso','frustrado','triste','aburrido','arrepentido'];
+const CATN={cole:'Colegio/proyectos',comida:'Comida',ejer:'Ejercicio',desc:'Descanso',otro:'Otro'};
+const ST={pendiente:'Pendiente',hecho:'Hecho',movido:'Movido',nohecho:'No hecho'};
+const SECNAME={close:'Cierre del día',plan:'Calendario',sleep:'Sueño',food:'Alimentación',lost:'Tiempo perdido',mood:'Ánimo',diary:'Diario',cross:'Cruces'};
+/* ===================== fin de la configuración ===================== */
+
+const SECS=['sleep','food','lost','mood','diary','plan','cfg'];
 const CFG={
  sleep:{name:'Sueño',lo:6,mid:7.5,hi:9,max:12,ideal:9,ticks:[0,3,6,9,12]},
- food:{name:'Alimentación',lo:1,mid:5,hi:10,max:10,ideal:10,ticks:[0,2,4,6,8,10]}
+ food:{name:'Alimentación',lo:1,mid:5,hi:10,max:10,ideal:10,ticks:[0,2,4,6,8,10]},
+ lost:{name:'Tiempo perdido',lo:0,hi:120,inv:1,dyn:1,max:180,ideal:null,ticks:[0,30,60,90,120,150,180]},
+ mood:{name:'Ánimo',lo:1,mid:5,hi:10,max:10,ideal:null,ticks:[0,2,4,6,8,10]}
 };
-let db={sleep:{},food:{}};
-try{const d=JSON.parse(localStorage.getItem('bitacora'));if(d)db={sleep:d.sleep||{},food:d.food||{}}}catch(e){}
+let db={};SECS.forEach(s=>db[s]={});
+try{const d=JSON.parse(localStorage.getItem('bitacora'));if(d)SECS.forEach(s=>db[s]=d[s]||{})}catch(e){}
 const persist=()=>{try{localStorage.setItem('bitacora',JSON.stringify(db))}catch(e){alert('No se pudo guardar en este navegador')}};
-let st={sec:'sleep',view:'day',date:iso(new Date()),score:null};
+const TODAY=iso(new Date());
+let st={sec:'close',view:'day',date:TODAY,score:null,cd:TODAY,pd:add(TODAY,1),open:null,flash:'',cf:null,mf:null,xv:'day',xh:{},xi:{},xd:null,dq:'',dfrom:'',dto:'',demo:'',dlim:30};
 
-const tm=t=>{const[a,b]=t.split(':');return +a*60+ +b};
-function val(s,d){const e=db[s][d];if(!e)return null;if(s=='food')return e.score;if(!e.bed||!e.wake)return null;return((tm(e.wake)-tm(e.bed)+1440)%1440)/60}
-function col(s,v){const c=CFG[s];let t=v<=c.mid?.5*(v-c.lo)/(c.mid-c.lo):.5+.5*(v-c.mid)/(c.hi-c.mid);t=Math.max(0,Math.min(1,t));
+const tm=t=>{const[a,b]=String(t).split(':');return +a*60+ +b};
+const hh=m=>{m=((Math.round(m)%1440)+1440)%1440;return pad(Math.floor(m/60))+':'+pad(m%60)};
+const ft=m=>{m=((Math.round(m)%1440)+1440)%1440;const h=Math.floor(m/60);return(h%12||12)+':'+pad(m%60)+(h<12?' am':' pm')};
+const dur=m=>m>=60?Math.floor(m/60)+' h'+(m%60?' '+m%60+' min':''):m+' min';
+const wdOf=d=>P(d).getDay();
+const dateLbl=d=>P(d).toLocaleDateString('es',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+const relTag=d=>d==TODAY?'Hoy':d==add(TODAY,1)?'Mañana':d==add(TODAY,-1)?'Ayer':'';
+
+function val(s,d){const e=db[s][d];if(!e)return null;
+ if(s=='sleep'){if(!e.bed||!e.wake)return null;return((tm(e.wake)-tm(e.bed)+1440)%1440)/60}
+ if(s=='lost')return e.min==null?null:e.min;
+ if(s=='plan')return e.pct==null?null:e.pct;
+ return e.score==null?null:e.score}
+function col(s,v){const c=CFG[s];let t;
+ if(c.inv)t=1-Math.max(0,Math.min(1,(v-c.lo)/(c.hi-c.lo)));
+ else{t=v<=c.mid?.5*(v-c.lo)/(c.mid-c.lo):.5+.5*(v-c.mid)/(c.hi-c.mid);t=Math.max(0,Math.min(1,t))}
  const A=[211,47,47],B=[253,216,53],C=[27,94,32],[x,y,u]=t<.5?[A,B,t*2]:[B,C,(t-.5)*2];
  return{c:'rgb('+x.map((k,i)=>Math.round(k+(y[i]-k)*u)).join()+')',f:t>.25&&t<.75?'#222':'#fff'}}
 const hm=v=>{const m=Math.round(v*60);return Math.floor(m/60)+'h '+pad(m%60)+'m'};
 const r1=v=>Math.round(v*10)/10;
-const fmt=v=>v==null?'—':st.sec=='sleep'?hm(v):r1(v)+' / 10';
-const sh=v=>st.sec=='sleep'?r1(v)+'h':v;
+const fmtS=(s,v)=>v==null?'—':s=='sleep'?hm(v):s=='lost'?(v>=60?hm(v/60):Math.round(v)+' min'):s=='plan'?Math.round(v)+' %':r1(v)+' / 10';
+const fmt=v=>fmtS(st.sec,v);
+const sh=v=>st.sec=='sleep'?r1(v)+'h':st.sec=='lost'?Math.round(v):v;
 
 function weekDays(s){const m=mon(s);return[...Array(7)].map((_,i)=>add(m,i))}
 function weeksOf(y,m){ // m = mes (0-11) o null para el año completo
@@ -106,7 +275,7 @@ function days(){const d=P(st.date),y=d.getFullYear(),m=d.getMonth();
  if(st.view=='week')return weekDays(st.date);
  if(st.view=='month')return weeksOf(y,m).flat().filter(Boolean);
  return weeksOf(y,null).flat().filter(Boolean)}
-function avg(l){const v=l.map(x=>val(st.sec,x)).filter(x=>x!=null);return{a:v.length?v.reduce((p,q)=>p+q,0)/v.length:null,n:v.length}}
+function avg(l,s){s=s||st.sec;const v=l.map(x=>val(s,x)).filter(x=>x!=null);return{a:v.length?v.reduce((p,q)=>p+q,0)/v.length:null,n:v.length}}
 
 function nav(n){const d=P(st.date),v=st.view;
  if(v=='day')d.setDate(d.getDate()+n);
@@ -121,15 +290,22 @@ function label(){const d=P(st.date),v=st.view;
  return''+d.getFullYear()}
 const go=d=>{st.date=d;st.view='day';render()};
 
+function tab(k){st.sec=k;st.open=null;st.flash='';render()}
 function render(){
- let h='<div class="tabs">'+Object.keys(CFG).map(k=>`<button class="${k==st.sec?'on':''}" onclick="st.sec='${k}';render()">${CFG[k].name}</button>`).join('')+'</div>';
- h+='<div class="tabs" style="margin-top:8px">'+[['day','Día'],['week','Semana'],['month','Mes'],['year','Año']].map(([k,l])=>`<button class="${k==st.view?'on':''}" onclick="st.view='${k}';render()">${l}</button>`).join('')+'</div>';
- h+='<div class="card"><div class="nav"><button class="btn" aria-label="Anterior" onclick="nav(-1)">‹</button><strong>'+label()+'</strong><button class="btn" aria-label="Siguiente" onclick="nav(1)">›</button></div>';
- h+=st.view=='day'?dayView():periodView();
- $('#app').innerHTML=h+'</div>';
- if(st.view=='day'&&st.sec=='sleep')live()}
+ let h='<div class="tabs">'+Object.keys(SECNAME).map(k=>`<button class="${k==st.sec?'on':''}" onclick="tab('${k}')">${SECNAME[k]}</button>`).join('')+'</div>';
+ if(CFG[st.sec]){
+  h+='<div class="tabs" style="margin-top:8px">'+[['day','Día'],['week','Semana'],['month','Mes'],['year','Año']].map(([k,l])=>`<button class="${k==st.view?'on':''}" onclick="st.view='${k}';render()">${l}</button>`).join('')+'</div>';
+  h+='<div class="card"><div class="nav"><button class="btn" aria-label="Anterior" onclick="nav(-1)">‹</button><strong>'+label()+'</strong><button class="btn" aria-label="Siguiente" onclick="nav(1)">›</button></div>';
+  h+=(st.view=='day'?dayView():periodView())+'</div>'}
+ else h+=({close:closeView,plan:planView,diary:diaryView,cross:crossView})[st.sec]();
+ $('#app').innerHTML=h;
+ if(st.sec=='sleep'&&st.view=='day')live();
+ if(st.sec=='close')clive();
+ if(st.sec=='diary')diaryList()}
 
-function dayView(){const s=st.sec,e=db[s][st.date]||{};st.score=e.score||null;
+/* ---------- Sueño, alimentación, tiempo perdido y ánimo: vista por día ---------- */
+function dayView(){const s=st.sec;if(s=='lost')return dayLost();if(s=='mood')return dayMood();
+ const e=db[s][st.date]||{};st.score=e.score||null;
  let h=`<input type="date" aria-label="Ir a una fecha" value="${st.date}" onchange="if(this.value){st.date=this.value;render()}">`;
  if(s=='sleep')h+=`<div class="row"><label>Me acosté<input type="time" id="bed" value="${e.bed||'23:00'}" oninput="live()"></label><label>Me desperté<input type="time" id="wake" value="${e.wake||'07:00'}" oninput="live()"></label></div><p id="lv"></p><p class="mu" style="margin:0">La fecha es el día en que despertaste.</p>`;
  else h+=`<label>Calificación del día</label><div class="sc">${[...Array(10)].map((_,i)=>{const k=col('food',i+1);return`<button class="${st.score==i+1?'on':''}" style="background:${k.c};color:${k.f}" onclick="pick(${i+1})">${i+1}</button>`}).join('')}</div><p class="mu" style="margin:0">1 = solo ultraprocesados y azúcar. 10 = nada de eso.</p>`;
@@ -146,31 +322,283 @@ function saveE(){const s=st.sec,e={note:$('#note').value.trim()};
  if(s=='sleep'){e.bed=$('#bed').value;e.wake=$('#wake').value;if(!e.bed||!e.wake)return alert('Completa la hora de acostarte y la de despertar.')}
  else{if(!st.score)return alert('Elige una calificación del 1 al 10.');e.score=st.score}
  db[s][st.date]=e;persist();render();window.cloud&&cloud.save(s,st.date,e)}
-function del(){const s=st.sec,d=st.date;delete db[s][d];persist();render();window.cloud&&cloud.del(s,d)}
+function del(){const s=st.sec,d=st.date;delete db[s][d];st.mf=null;persist();render();window.cloud&&cloud.del(s,d)}
 
+/* Tiempo perdido (día) */
+function dayLost(){const e=db.lost[st.date]||{};
+ let h=`<input type="date" aria-label="Ir a una fecha" value="${st.date}" onchange="if(this.value){st.date=this.value;render()}">`;
+ h+=`<label>Minutos perdidos<input type="number" id="lmin" inputmode="numeric" min="0" step="5" placeholder="0" value="${e.min==null?'':e.min}"></label>`;
+ h+=`<div class="chips"><button type="button" class="chp" onclick="lAdd(15)">+15</button><button type="button" class="chp" onclick="lAdd(30)">+30</button><button type="button" class="chp" onclick="lAdd(60)">+60</button><button type="button" class="chp" onclick="lAdd(-15)">−15</button></div>`;
+ h+=`<label>¿En qué fue? (opcional)<textarea id="note" rows="3">${esc(e.note||'')}</textarea></label>`;
+ h+=`<div class="acts"><button class="btn pri" onclick="saveLost()">Guardar</button>${db.lost[st.date]?'<button class="btn" onclick="del()">Borrar</button>':''}</div>`;
+ const rec=Object.entries(db.lost).filter(([d,x])=>x.note).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,10);
+ return h+'<h3>Notas recientes</h3>'+(rec.length?rec.map(([d,x])=>`<div class="nt" onclick="go('${d}')"><b>${fs(d)}</b>: ${fmt(val('lost',d))}<br>${esc(x.note)}</div>`).join(''):'<p class="mu">Aún no hay notas. Guarda un día con nota y aparecerá aquí.</p>')}
+function lAdd(n){const i=$('#lmin');i.value=Math.max(0,(+i.value||0)+n)}
+function saveLost(){const v=$('#lmin').value;if(v===''||isNaN(+v)||+v<0)return alert('Escribe los minutos perdidos (puede ser 0).');
+ const e={min:Math.round(+v),note:$('#note').value.trim()};db.lost[st.date]=e;persist();render();window.cloud&&cloud.save('lost',st.date,e)}
+
+/* Ánimo: selector reutilizable (st[key] guarda el estado del formulario) */
+function scoreBtns(key,f,sec,cur){return`<div class="sc">`+[...Array(10)].map((_,i)=>{const k=col(sec,i+1);return`<button type="button" class="${cur==i+1?'on':''}" style="background:${k.c};color:${k.f}" onclick="scTap('${key}','${f}',${i+1},this)">${i+1}</button>`}).join('')+'</div>'}
+function scTap(key,f,n,el){const c=st[key];c[f]=n;c.dirty=true;st.flash='';el.parentNode.querySelectorAll('button').forEach((b,i)=>b.classList.toggle('on',i+1==n))}
+function moodBox(key){const c=st[key];
+ return`<label>Ánimo (1–10)</label>${scoreBtns(key,'mood','mood',c.mood)}<p class="mu" style="margin:0">1 = muy mal. 10 = muy bien.</p><label>Emociones (elige las que quieras)</label><div class="chips">${EMO.map(e=>`<button type="button" class="chp${c.emo.includes(e)?' on':''}" onclick="emoTap('${key}','${e}',this)">${e}</button>`).join('')}<button type="button" class="chp${c.otroOn?' on':''}" onclick="emoTap('${key}','',this)">Otro</button></div><input type="text" id="${key}_o" placeholder="¿Qué otra emoción?" value="${qa(c.other)}"${c.otroOn?'':' hidden'} oninput="st['${key}'].other=this.value;st['${key}'].dirty=true">`}
+function emoTap(key,e,el){const c=st[key];c.dirty=true;st.flash='';
+ if(e){const i=c.emo.indexOf(e);if(i<0)c.emo.push(e);else c.emo.splice(i,1);el.classList.toggle('on',i<0)}
+ else{c.otroOn=!c.otroOn;el.classList.toggle('on',c.otroOn);const o=document.getElementById(key+'_o');o.hidden=!c.otroOn;if(c.otroOn)o.focus()}}
+function dayMood(){const d=st.date,e=db.mood[d]||{};
+ if(!st.mf||st.mf.date!=d)st.mf={date:d,dirty:false,mood:e.score||null,emo:[...(e.emo||[])],otroOn:!!e.other,other:e.other||''};
+ let h=`<input type="date" aria-label="Ir a una fecha" value="${d}" onchange="if(this.value){st.date=this.value;render()}">`+moodBox('mf');
+ h+=`<div class="acts"><button class="btn pri" onclick="saveMood()">Guardar</button>${db.mood[d]?'<button class="btn" onclick="del()">Borrar</button>':''}</div>`;
+ const rec=Object.keys(db.mood).sort().reverse().slice(0,10);
+ return h+'<h3>Registros recientes</h3>'+(rec.length?rec.map(x=>{const m=db.mood[x],t=(m.emo||[]).concat(m.other?[m.other]:[]).join(', ');return`<div class="nt" onclick="go('${x}')"><b>${fs(x)}</b>: ${fmtS('mood',m.score)}${t?'<br>'+esc(t):''}</div>`}).join(''):'<p class="mu">Aún no hay registros de ánimo.</p>')}
+function saveMood(){const c=st.mf,d=st.date,o=c.otroOn&&c.other.trim()?c.other.trim():'';
+ if(!c.mood&&!c.emo.length&&!o)return alert('Elige un ánimo del 1 al 10 o al menos una emoción.');
+ const e={score:c.mood||null,emo:[...c.emo],other:o};db.mood[d]=e;st.mf=null;persist();render();window.cloud&&cloud.save('mood',d,e)}
+
+/* ---------- Gráficas y tablas (barras + cuadrícula) ---------- */
 function cell(x,big){if(!x)return'<i class="e"></i>';const v=val(st.sec,x),k=v==null?null:col(st.sec,v);
  return`<div class="cell${big?' big':''}"${k?` style="background:${k.c};color:${k.f}"`:''} title="${x}: ${v==null?'sin datos':fmt(v)}" onclick="go('${x}')">${big?`<small>${+x.slice(8)}</small>${v==null?'':sh(v)}`:''}</div>`}
 function heat(ws,year){
  if(year)return'<div class="hy"><div class="dl">'+DL.map(d=>`<span>${d}</span>`).join('')+'</div><div class="grid y">'+ws.flat().map(x=>cell(x)).join('')+'</div></div>';
  return'<div class="grid w">'+DL.map(d=>`<span class="dh">${d}</span>`).join('')+ws.flat().map(x=>cell(x,1)).join('')+'</div>'}
-function chart(it){const c=CFG[st.sec],W=600,H=230,L=30,T=14,B=24,n=it.length,bw=(W-L)/n,y=v=>T+(H-T-B)*(1-Math.min(v,c.max)/c.max);
+function chart(it){const c=CFG[st.sec],W=600,H=230,L=30,T=14,B=24,n=it.length,bw=(W-L)/n;
+ let mx=c.max,tk=c.ticks;
+ if(c.dyn){const m=Math.max(60,...it.map(o=>o.v||0)),stp=[15,30,60,120,240].find(q=>m/q<=5)||240;mx=Math.ceil(m/stp)*stp;tk=[];for(let q=0;q<=mx;q+=stp)tk.push(q)}
+ const y=v=>T+(H-T-B)*(1-Math.min(v,mx)/mx);
  let s=`<svg viewBox="0 0 ${W} ${H}" class="ch" role="img" aria-label="Gráfica">`;
- for(const t of c.ticks)s+=`<line x1="${L}" x2="${W}" y1="${y(t)}" y2="${y(t)}" stroke="var(--bd)"/><text x="${L-5}" y="${y(t)+3}" text-anchor="end">${t}</text>`;
+ for(const t of tk)s+=`<line x1="${L}" x2="${W}" y1="${y(t)}" y2="${y(t)}" stroke="var(--bd)"/><text x="${L-5}" y="${y(t)+3}" text-anchor="end">${t}</text>`;
  it.forEach((o,i)=>{const x=L+i*bw;
   if(o.v!=null){s+=`<rect x="${x+bw*.15}" y="${y(o.v)}" width="${bw*.7}" height="${y(0)-y(o.v)}" rx="2" fill="${col(st.sec,o.v).c}"${o.d?` onclick="go('${o.d}')" style="cursor:pointer"`:''}><title>${o.l}: ${fmt(o.v)}</title></rect>`;
    if(n<=12)s+=`<text x="${x+bw/2}" y="${y(o.v)-3}" text-anchor="middle">${r1(o.v)}</text>`}
   if(n<=12||i==0||(i+1)%5==0)s+=`<text x="${x+bw/2}" y="${H-7}" text-anchor="middle">${o.l}</text>`});
- return s+`<line x1="${L}" x2="${W}" y1="${y(c.ideal)}" y2="${y(c.ideal)}" stroke="var(--ac)" stroke-width="2" stroke-dasharray="5 4"/></svg>`}
+ return s+(c.ideal!=null?`<line x1="${L}" x2="${W}" y1="${y(c.ideal)}" y2="${y(c.ideal)}" stroke="var(--ac)" stroke-width="2" stroke-dasharray="5 4"/>`:'')+`</svg>`}
 
-function periodView(){const v=st.view,L=days(),r=avg(L),d=P(st.date),y=d.getFullYear();
+function emoFreq(L){const c={};L.forEach(x=>{const m=db.mood[x];if(!m)return;(m.emo||[]).forEach(e=>c[e]=(c[e]||0)+1);if(m.other)c.otro=(c.otro||0)+1});return Object.entries(c).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))}
+function emoBars(L){const f=emoFreq(L).slice(0,8);if(!f.length)return'<h3>Emociones más frecuentes</h3><p class="mu">Aún no hay emociones registradas en este período.</p>';const mx=f[0][1];
+ return'<h3>Emociones más frecuentes</h3>'+f.map(([e,n])=>`<div class="eb"><span>${esc(e)}</span><div><i style="width:${Math.round(n/mx*100)}%"></i></div><b>${n}</b></div>`).join('')}
+
+function periodView(){const s=st.sec,v=st.view,L=days(),r=avg(L),d=P(st.date),y=d.getFullYear();
  const nm={week:'de la semana',month:'del mes',year:'del año'}[v];
- const it=v=='year'?MS.map((l,i)=>({l,v:avg(L.filter(x=>+x.slice(5,7)==i+1)).a})):L.map((x,i)=>({l:v=='week'?DL[i]:+x.slice(8),v:val(st.sec,x),d:x}));
+ const it=v=='year'?MS.map((l,i)=>({l,v:avg(L.filter(x=>+x.slice(5,7)==i+1)).a})):L.map((x,i)=>({l:v=='week'?DL[i]:+x.slice(8),v:val(s,x),d:x}));
  const ws=v=='week'?[weekDays(st.date)]:weeksOf(y,v=='month'?d.getMonth():null);
- return`<div class="stats"><div class="stat"><span>Promedio ${nm}</span><b>${fmt(r.a)}</b></div><div class="stat"><span>Días registrados</span><b>${r.n} de ${L.length}</b></div><div class="stat"><span>Meta</span><b>${st.sec=='sleep'?'9h':'10 / 10'}</b></div></div>`
- +(v=='year'?'<p class="mu">Gráfica: promedio de cada mes. La línea punteada es la meta.</p>':'<p class="mu">La línea punteada es la meta.</p>')+chart(it)+heat(ws,v=='year')+'<p class="mu">Toca un día para ver o editar su registro.</p>'}
+ let t3;
+ if(s=='sleep')t3=['Meta','9h'];else if(s=='food')t3=['Meta','10 / 10'];
+ else if(s=='lost'){const a=L.map(x=>val('lost',x)).filter(x=>x!=null);t3=['Total del período',fmtS('lost',a.reduce((p,q)=>p+q,0))]}
+ else{const f=emoFreq(L);t3=['Emoción más frecuente',f.length?esc(f[0][0]):'—']}
+ const mt=CFG[s].ideal!=null?' La línea punteada es la meta.':'';
+ return`<div class="stats"><div class="stat"><span>Promedio ${nm}</span><b>${fmt(r.a)}</b></div><div class="stat"><span>Días registrados</span><b>${r.n} de ${L.length}</b></div><div class="stat"><span>${t3[0]}</span><b>${t3[1]}</b></div></div>`
+ +(v=='year'?'<p class="mu">Gráfica: promedio de cada mes.'+mt+'</p>':(mt?'<p class="mu">'+mt.trim()+'</p>':''))+chart(it)+heat(ws,v=='year')+'<p class="mu">Toca un día para ver o editar su registro.</p>'+(s=='mood'?emoBars(L):'')}
 
+/* =====================================================================
+   CIERRE DEL DÍA (pantalla por defecto)
+   Guarda en los mismos registros de siempre: sleep_, food_ (más lost_, mood_, diary_)
+   ===================================================================== */
+const orgPref=()=>{try{return localStorage.getItem('bit_org')!=='0'}catch(e){return true}};
+const wakeFor=d=>HORARIOS.despertar[wdOf(d)]||'07:00';
+function lastBed(d){const k=Object.keys(db.sleep).filter(x=>x<d&&db.sleep[x].bed).sort().pop();
+ if(k)return db.sleep[k].bed;
+ const b=tplBlocks(add(d,-1)).find(x=>/acostar/i.test(x.t));return b?b.s:'19:00'}
+function cfInit(d){const sl=db.sleep[d]||{},fo=db.food[d]||{},lo=db.lost[d]||{},mo=db.mood[d]||{},di=db.diary[d]||{};
+ return{date:d,dirty:false,bed:sl.bed||lastBed(d),wake:sl.wake||wakeFor(d),food:fo.score||null,min:lo.min==null?'':lo.min,lnote:lo.note||'',mood:mo.score||null,emo:[...(mo.emo||[])],otroOn:!!mo.other,other:mo.other||'',diary:di.text||'',org:orgPref()}}
+function cfSet(k,v){const c=st.cf;if(!c)return;c[k]=v;c.dirty=true;st.flash='';if(k=='bed'||k=='wake')clive()}
+function cfAdd(n){const c=st.cf;c.min=Math.max(0,(+c.min||0)+n);c.dirty=true;$('#clmin').value=c.min}
+function cfOrg(on){st.cf.org=on;st.cf.dirty=true;try{localStorage.setItem('bit_org',on?'1':'0')}catch(e){}}
+function cNav(n){st.cd=add(st.cd,n);st.cf=null;st.flash='';render()}
+function clive(){const c=st.cf,el=$('#clv');if(!c||!el)return;
+ if(!c.bed||!c.wake){el.textContent='';return}
+ const v=((tm(c.wake)-tm(c.bed)+1440)%1440)/60,m=HORARIOS.metaSueno;
+ el.textContent=hm(v)+' de sueño'+(v<m?' · faltan '+hm(m-v)+' para la meta':' · meta cumplida')}
+function idealBed(d){const w=tm(wakeFor(add(d,1)));return((w-HORARIOS.metaSueno*60)%1440+1440)%1440}
+function closeView(){const d=st.cd;if(!st.cf||st.cf.date!=d)st.cf=cfInit(d);
+ const c=st.cf,pl=db.plan[d],q=pl?pstats(pl):null,tg=relTag(d);
+ let h='<div class="card">';
+ h+=`<div class="nav"><button class="btn" aria-label="Día anterior" onclick="cNav(-1)">‹</button><strong>${dateLbl(d)}${tg?'<small class="mu" style="display:block;font-weight:400">'+tg+'</small>':''}</strong><button class="btn" aria-label="Día siguiente" onclick="cNav(1)">›</button></div>`;
+ h+=`<input type="date" aria-label="Ir a una fecha" value="${d}" onchange="if(this.value){st.cd=this.value;st.cf=null;st.flash='';render()}">`;
+ if(st.flash)h+=`<p class="ok">${st.flash}</p>`;
+ h+=`<p class="mu" style="margin:10px 0 0">${q&&q.pct!=null?'Cumplimiento del plan de este día: <b>'+q.pct+' %</b> ('+q.done+' de '+q.total+' bloques). ':'Aún no hay bloques marcados en el calendario de este día. '}<a href="#" onclick="event.preventDefault();st.pd='${d}';tab('plan')">Abrir calendario de este día</a></p>`;
+ h+=`<div class="row"><label>Hora a la que me acosté ayer<input type="time" value="${c.bed||''}" oninput="cfSet('bed',this.value)"></label><label>Hora a la que me levanté hoy<input type="time" value="${c.wake||''}" oninput="cfSet('wake',this.value)"></label></div><p id="clv"></p>`;
+ h+=`<label>Alimentación (1–10)</label>${scoreBtns('cf','food','food',c.food)}<p class="mu" style="margin:0">Según si evité azúcares y ultraprocesados y qué tan bien sentí que comí hoy.</p>`;
+ h+=`<label>Tiempo perdido hoy (minutos)<input type="number" id="clmin" inputmode="numeric" min="0" step="5" placeholder="0" value="${c.min}" oninput="cfSet('min',this.value)"></label>`;
+ h+=`<div class="chips"><button type="button" class="chp" onclick="cfAdd(15)">+15</button><button type="button" class="chp" onclick="cfAdd(30)">+30</button><button type="button" class="chp" onclick="cfAdd(60)">+60</button><button type="button" class="chp" onclick="cfAdd(-15)">−15</button></div>`;
+ h+=`<label>¿En qué fue? (opcional)<textarea rows="2" oninput="cfSet('lnote',this.value)">${esc(c.lnote)}</textarea></label>`;
+ h+=`<h3 style="margin-bottom:0">Cómo me siento antes de dormir</h3>`+moodBox('cf');
+ h+=`<label>Diario<textarea rows="6" placeholder="Escribe lo que quieras recordar de hoy…" oninput="cfSet('diary',this.value)">${esc(c.diary)}</textarea></label>`;
+ h+=`<label class="sw"><input type="checkbox"${c.org?' checked':''} onchange="cfOrg(this.checked)"><span>Organizar el día siguiente</span></label>`;
+ h+=`<p class="mu" style="margin:6px 0 0">Mañana te levantas a las ${ft(tm(wakeFor(add(d,1))))}: para dormir ${HORARIOS.metaSueno} h, acuéstate a las ${ft(idealBed(d))}.</p>`;
+ h+=`<div class="acts"><button class="btn pri lg" onclick="saveClose()">Guardar</button></div></div>`;
+ return h}
+function saveClose(){const c=st.cf,d=c.date;
+ if(!!c.bed!==!!c.wake)return alert('Completa la hora de acostarte y la de levantarte, o deja las dos vacías.');
+ const set=(s,e)=>{db[s][d]=e;window.cloud&&cloud.save(s,d,e)},rm=s=>{if(db[s][d]){delete db[s][d];window.cloud&&cloud.del(s,d)}};
+ if(c.bed&&c.wake){const o=db.sleep[d]||{};set('sleep',{...o,bed:c.bed,wake:c.wake,note:o.note||''})}
+ if(c.food){const o=db.food[d]||{};set('food',{...o,score:c.food,note:o.note||''})}
+ if(c.min!==''&&!isNaN(+c.min)&&+c.min>=0)set('lost',{min:Math.round(+c.min),note:(c.lnote||'').trim()});else if(c.min==='')rm('lost');
+ const o=c.otroOn&&(c.other||'').trim()?c.other.trim():'';
+ if(c.mood||c.emo.length||o)set('mood',{score:c.mood||null,emo:[...c.emo],other:o});else rm('mood');
+ const tx=(c.diary||'').trim();
+ if(tx)set('diary',{text:tx});else rm('diary');
+ persist();st.cf=null;
+ if(c.org){st.sec='plan';st.pd=add(d,1);st.open=null;st.flash=''}else st.flash='Guardado ✓';
+ render();window.scrollTo(0,0)}
+
+/* =====================================================================
+   CALENDARIO DEL DÍA
+   Se guarda en plan_AAAA-MM-DD → {blocks:[{id,t,s,d,c,n,st}], top:[3 prioridades], pct, done, total}
+   La plantilla editada se guarda en cfg_tpl → {days:{<díaSemana>:[bloques]}}
+   ===================================================================== */
+const isBuf=b=>/imprevisto/i.test(b.t);
+const sortB=bl=>[...bl].sort((a,b)=>tm(a.s)-tm(b.s)||String(a.id).localeCompare(String(b.id)));
+function pstats(p){const l=(p.blocks||[]).filter(b=>!isBuf(b)),done=l.filter(b=>b.st=='hecho').length;return{done,total:l.length,pct:l.length?Math.round(100*done/l.length):null}}
+function tplBlocks(d){const wd=wdOf(d),o=db.cfg.tpl&&db.cfg.tpl.days&&db.cfg.tpl.days[wd];
+ const src=o||HORARIOS.plantilla[wd].map(([t,s,m,c])=>({t,s,d:m,c}));
+ return src.map((b,i)=>({id:'t'+i,t:b.t,s:b.s,d:b.d,c:b.c,n:b.n||'',st:'pendiente'}))}
+function getPlan(d){const p=db.plan[d];if(p){if(!p.top)p.top=['','',''];return p}return{blocks:tplBlocks(d),top:['','',''],virtual:1}}
+function ensurePlan(d){if(!db.plan[d])db.plan[d]={blocks:tplBlocks(d),top:['','','']};const p=db.plan[d];if(!p.top)p.top=['','',''];return p}
+function savePlan(d){const p=db.plan[d],q=pstats(p);p.pct=q.pct;p.done=q.done;p.total=q.total;persist();window.cloud&&cloud.save('plan',d,p)}
+const mkId=()=>'b'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+function gaps(bl){const o=[];let e=tm(HORARIOS.inicioDia);const fin=tm(HORARIOS.finDia);
+ sortB(bl).forEach(b=>{const s=tm(b.s);if(s-e>=15&&s<=fin)o.push({s:e,len:s-e});e=Math.max(e,s+b.d)});return o}
+function pNav(n){st.pd=add(st.pd,n);st.open=null;render()}
+function pGo(d){st.pd=d;st.open=null;render()}
+function setTop(i,v){const p=ensurePlan(st.pd);p.top[i]=v.trim();savePlan(st.pd)}
+function setB(id,k,v){const p=ensurePlan(st.pd),b=p.blocks.find(x=>x.id==id);if(!b)return;
+ if(k=='d')v=Math.max(15,Math.round(+v)||15);
+ b[k]=v;savePlan(st.pd);render()}
+function durB(id,n){const p=getPlan(st.pd),b=p.blocks.find(x=>x.id==id);if(b)setB(id,'d',Math.max(15,b.d+n))}
+function mark(id){const p=ensurePlan(st.pd),b=p.blocks.find(x=>x.id==id);if(!b)return;b.st=b.st=='hecho'?'pendiente':'hecho';savePlan(st.pd);render()}
+function later(id){const p=ensurePlan(st.pd),b=p.blocks.find(x=>x.id==id);if(!b)return;
+ const s0=tm(b.s),mx=Math.max(s0,tm(HORARIOS.finDia)-b.d),n=Math.min(s0+HORARIOS.moverMin,mx);
+ if(n==s0)return alert('Este bloque ya no se puede mover más tarde dentro del día.');
+ b.s=hh(n);b.st='movido';savePlan(st.pd);render()}
+function openB(id){st.open=st.open==id?null:id;render()}
+function addB(s,len){const p=ensurePlan(st.pd),g=gaps(p.blocks)[0];
+ const b={id:mkId(),t:'Nuevo bloque',s:s||hh(g?g.s:tm(HORARIOS.inicioDia)),d:len?Math.min(len,60):30,c:'otro',n:'',st:'pendiente'};
+ p.blocks.push(b);st.open=b.id;savePlan(st.pd);render();const el=document.getElementById('b_'+b.id);if(el&&el.scrollIntoView)el.scrollIntoView({block:'center'})}
+function delB(id){if(!confirm('¿Eliminar este bloque?'))return;const p=ensurePlan(st.pd);p.blocks=p.blocks.filter(x=>x.id!=id);st.open=null;savePlan(st.pd);render()}
+function resetDay(){if(!confirm('Los bloques de este día se reemplazarán por la plantilla. Las prioridades se conservan. ¿Continuar?'))return;
+ const p=ensurePlan(st.pd);p.blocks=tplBlocks(st.pd);st.open=null;savePlan(st.pd);render()}
+const dayName=d=>P(d).toLocaleDateString('es',{weekday:'long'});
+function saveTpl(){const wd=wdOf(st.pd);if(!confirm('Este día quedará como la plantilla de todos los '+dayName(st.pd)+'s (se guardan los bloques sin su estado). ¿Continuar?'))return;
+ const p=getPlan(st.pd),cfg=db.cfg.tpl||{days:{}};cfg.days=cfg.days||{};
+ cfg.days[wd]=p.blocks.map(b=>({t:b.t,s:b.s,d:b.d,c:b.c,n:b.n||''}));db.cfg.tpl=cfg;persist();window.cloud&&cloud.save('cfg','tpl',cfg);render()}
+function restoreTpl(){const wd=wdOf(st.pd);if(!confirm('Se restaurará la plantilla base de los '+dayName(st.pd)+'s. Los días ya guardados no cambian. ¿Continuar?'))return;
+ const cfg=db.cfg.tpl;if(!cfg||!cfg.days)return;delete cfg.days[wd];
+ if(Object.keys(cfg.days).length){persist();window.cloud&&cloud.save('cfg','tpl',cfg)}else{delete db.cfg.tpl;persist();window.cloud&&cloud.del('cfg','tpl')}
+ render()}
+function blockHTML(b,ov){const o=st.open==b.id,s0=tm(b.s),k=CATN[b.c]?b.c:'otro',stt=ST[b.st]?b.st:'pendiente';
+ let h=`<div class="blk s-${stt}" id="b_${b.id}" style="--cc:var(--k-${k})"><div class="bm"><div class="bt" onclick="openB('${b.id}')"><div class="bh">${ft(s0)} – ${ft(s0+b.d)}${ov?' · <b class="wr">⚠ se cruza</b>':''}</div><div class="bn">${esc(b.t)}${stt!='pendiente'?`<span class="bdg">${ST[stt]}</span>`:''}</div><div class="bh">${dur(b.d)} · ${CATN[k]}${b.n?' · '+esc(b.n.length>40?b.n.slice(0,40)+'…':b.n):''}</div></div><div class="ba"><button class="ib${stt=='hecho'?' ok':''}" onclick="mark('${b.id}')" aria-label="Marcar como hecho"><b>✓</b><small>Hecho</small></button><button class="ib" onclick="later('${b.id}')" aria-label="Mover a más tarde"><b>⏭</b><small>Más tarde</small></button></div></div>`;
+ if(o){const id=b.id;
+  h+=`<div class="pn"><label>Título<input type="text" value="${qa(b.t)}" onchange="setB('${id}','t',this.value.trim()||'Bloque')"></label>`
+  +`<div class="row"><label>Inicio<input type="time" value="${b.s}" onchange="if(this.value)setB('${id}','s',this.value)"></label><label style="min-width:210px">Duración (min)<div class="stp"><button type="button" class="btn" onclick="durB('${id}',-15)" aria-label="Menos 15 minutos">−15</button><input type="number" inputmode="numeric" min="15" step="5" value="${b.d}" onchange="setB('${id}','d',this.value)"><button type="button" class="btn" onclick="durB('${id}',15)" aria-label="Más 15 minutos">+15</button></div></label></div>`
+  +`<label>Categoría</label><div class="chips">${Object.keys(CATN).map(c=>`<button type="button" class="chp${b.c==c?' on':''}" style="border-left:6px solid var(--k-${c})" onclick="setB('${id}','c','${c}')">${CATN[c]}</button>`).join('')}</div>`
+  +`<label>Nota (opcional)<textarea rows="2" onchange="setB('${id}','n',this.value.trim())">${esc(b.n||'')}</textarea></label>`
+  +`<label>Estado</label><div class="seg">${Object.keys(ST).map(k2=>`<button type="button" class="${stt==k2?'on':''}" onclick="setB('${id}','st','${k2}')">${ST[k2]}</button>`).join('')}</div>`
+  +`<div class="acts"><button class="btn" onclick="delB('${id}')">Eliminar bloque</button><button class="btn" onclick="openB('${id}')">Cerrar</button></div></div>`}
+ return h+'</div>'}
+function planView(){const d=st.pd,p=getPlan(d),bl=sortB(p.blocks),q=pstats(p),tg=relTag(d),wd=wdOf(d),edited=!!(db.cfg.tpl&&db.cfg.tpl.days&&db.cfg.tpl.days[wd]);
+ const ini=tm(HORARIOS.inicioDia),fin=tm(HORARIOS.finDia),tot=fin-ini,ib=idealBed(d),bb=bl.filter(b=>/acostar/i.test(b.t)).pop(),wn=tm(wakeFor(add(d,1)));
+ let h=`<div class="card"><div class="nav"><button class="btn" aria-label="Día anterior" onclick="pNav(-1)">‹</button><strong>${P(d).toLocaleDateString('es',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}${tg?'<small class="mu" style="display:block;font-weight:400">'+tg+'</small>':''}</strong><button class="btn" aria-label="Día siguiente" onclick="pNav(1)">›</button></div>`;
+ h+=`<div class="tabs"><button class="${d==TODAY?'on':''}" onclick="pGo('${TODAY}')">Hoy</button><button class="${d==add(TODAY,1)?'on':''}" onclick="pGo('${add(TODAY,1)}')">Mañana</button></div>`;
+ h+=`<input type="date" aria-label="Ir a una fecha" style="margin-top:8px" value="${d}" onchange="if(this.value)pGo(this.value)">`;
+ h+=`<h3>3 prioridades de ${d==add(TODAY,1)?'mañana':d==TODAY?'hoy':'este día'}</h3>`+[0,1,2].map(i=>`<input type="text" class="pr" placeholder="${i+1}. Lo más importante" value="${qa(p.top[i]||'')}" onchange="setTop(${i},this.value)">`).join('');
+ h+=`<div class="stats" style="margin-top:14px"><div class="stat"><span>Cumplimiento</span><b>${q.pct==null?'—':q.pct+' %'}</b><span>${q.done} de ${q.total} bloques</span></div><div class="stat"><span>Hora ideal para acostarte</span><b>${ft(ib)}</b><span>${HORARIOS.metaSueno} h de sueño</span></div></div>`;
+ h+=`<p class="mu" style="margin-top:0">Para levantarte el ${dayName(add(d,1))} a las ${ft(wn)} y dormir ${HORARIOS.metaSueno} h, acuéstate a las ${ft(ib)}.${bb?' Con tu plan (acostarte a las '+ft(tm(bb.s))+') dormirías '+hm(((wn-tm(bb.s))%1440+1440)%1440/60)+'.':''}</p>`;
+ h+=`<div class="dbar">${bl.map(b=>{const s=Math.max(ini,tm(b.s)),e=Math.min(fin,tm(b.s)+b.d);return e>s?`<i style="left:${(s-ini)/tot*100}%;width:${(e-s)/tot*100}%;--cc:var(--k-${CATN[b.c]?b.c:'otro'})"></i>`:''}).join('')}</div><div class="dax"><span>${ft(ini)}</span><span>${ft(fin)}</span></div>`;
+ if(p.virtual)h+=`<p class="mu">Plan precargado con la plantilla ${edited?'(editada) ':''}del ${dayName(d)}. Se guarda cuando tocas un bloque o escribes una prioridad.</p>`;
+ let end=0;
+ sortB(bl).forEach((b,i)=>{const s0=tm(b.s);
+  if(i>0&&s0-end>=15&&s0<=fin)h+=`<div class="gap" onclick="addB('${hh(end)}',${s0-end})">Libre ${dur(s0-end)} · tocar para agregar</div>`;
+  h+=blockHTML(b,i>0&&s0<end);end=Math.max(end,s0+b.d)});
+ h+=`<div class="acts"><button class="btn pri lg" onclick="addB()">+ Agregar bloque</button></div>`;
+ h+=`<h3>Plantilla del ${dayName(d)}${edited?' (editada)':''}</h3><div class="chips"><button class="btn" onclick="resetDay()">Restablecer este día</button><button class="btn" onclick="saveTpl()">Guardar este día como plantilla</button>${edited?'<button class="btn" onclick="restoreTpl()">Restaurar plantilla base</button>':''}</div>`;
+ return h+'</div>'}
+
+/* =====================================================================
+   DIARIO
+   ===================================================================== */
+function diaryView(){
+ return`<div class="card"><label style="margin-top:0">Buscar<input type="text" id="dq" placeholder="Buscar en el diario…" value="${qa(st.dq)}" oninput="st.dq=this.value;st.dlim=30;diaryList()"></label>`
+ +`<div class="row"><label>Desde<input type="date" value="${st.dfrom}" onchange="st.dfrom=this.value;st.dlim=30;diaryList()"></label><label>Hasta<input type="date" value="${st.dto}" onchange="st.dto=this.value;st.dlim=30;diaryList()"></label></div>`
+ +`<label>Emoción<select onchange="st.demo=this.value;st.dlim=30;diaryList()"><option value="">Todas</option>${[...EMO,'otro'].map(e=>`<option${st.demo==e?' selected':''}>${e}</option>`).join('')}</select></label>`
+ +`<div class="acts"><button class="btn" onclick="diaryClear()">Limpiar filtros</button></div><div id="dlist"></div></div>`}
+function diaryClear(){st.dq='';st.dfrom='';st.dto='';st.demo='';st.dlim=30;render()}
+function diaryList(){const el=$('#dlist');if(!el)return;
+ const q=(st.dq||'').trim().toLowerCase(),f=st.dfrom,t=st.dto,em=st.demo;
+ const ds=Object.keys(db.diary).filter(d=>db.diary[d]&&db.diary[d].text).filter(d=>{
+  if(f&&d<f)return false;if(t&&d>t)return false;
+  const m=db.mood[d]||{},ee=[...(m.emo||[])];if(m.other)ee.push('otro');
+  if(em&&!ee.includes(em))return false;
+  if(q&&!(db.diary[d].text+' '+ee.join(' ')+' '+(m.other||'')).toLowerCase().includes(q))return false;
+  return true}).sort().reverse();
+ if(!ds.length){el.innerHTML='<p class="mu" style="margin-top:14px">'+(Object.keys(db.diary).length?'No hay entradas con esos filtros.':'Aún no hay entradas. Escribe en el diario desde “Cierre del día”.')+'</p>';return}
+ el.innerHTML=`<p class="mu" style="margin-top:14px">${ds.length} ${ds.length==1?'entrada':'entradas'}</p>`+ds.slice(0,st.dlim).map(d=>{
+  const m=db.mood[d]||{},k=m.score?col('mood',m.score):null,tg=(m.emo||[]).concat(m.other?['otro: '+m.other]:[]);
+  return`<div class="de"><div class="dh2"><b>${dateLbl(d)}</b>${k?`<span class="bg" style="background:${k.c};color:${k.f}">Ánimo ${m.score}</span>`:''}</div>${tg.map(x=>`<span class="tg">${esc(x)}</span>`).join('')}<div class="dt">${esc(db.diary[d].text)}</div><button class="btn" onclick="editDay('${d}')">Editar</button></div>`}).join('')
+  +(ds.length>st.dlim?'<div class="acts"><button class="btn" onclick="st.dlim+=30;diaryList()">Mostrar más</button></div>':'')}
+function editDay(d){st.sec='close';st.cd=d;st.cf=null;st.flash='';render();window.scrollTo(0,0)}
+
+/* =====================================================================
+   CRUCES — líneas normalizadas a 0–100 %, el tooltip muestra el valor real
+   ===================================================================== */
+const XS=[
+ {k:'sleep',n:'Sueño',c:'#5b6cff'},
+ {k:'food',n:'Alimentación',c:'#2f9e44'},
+ {k:'lost',n:'Tiempo perdido',c:'#e8590c'},
+ {k:'mood',n:'Ánimo',c:'#d6336c'},
+ {k:'plan',n:'Cumplimiento',c:'#0c8599'}
+];
+const XW=600,XL=36,XR=10;
+function xPeriods(v){const o=[],n=new Date();
+ if(v=='day'){for(let i=29;i>=0;i--){const d=add(TODAY,-i);o.push({l:+d.slice(8),t:P(d).toLocaleDateString('es',{weekday:'short',day:'numeric',month:'short'}),days:[d]})}}
+ else if(v=='week'){const m0=mon(TODAY);for(let i=11;i>=0;i--){const w=add(m0,-7*i);o.push({l:fs(w),t:'Semana del '+fs(w),days:weekDays(w)})}}
+ else if(v=='month'){for(let i=11;i>=0;i--){const dt=new Date(n.getFullYear(),n.getMonth()-i,1),y=dt.getFullYear(),m=dt.getMonth();o.push({l:MS[m],t:dt.toLocaleDateString('es',{month:'long',year:'numeric'}),days:weeksOf(y,m).flat().filter(Boolean)})}}
+ else{let y0=n.getFullYear()-1;SECS.forEach(s=>Object.keys(db[s]).forEach(k=>{const y=+k.slice(0,4);if(y>=2000&&y<y0)y0=y}));
+  for(let y=y0;y<=n.getFullYear();y++)o.push({l:''+y,t:'Año '+y,days:weeksOf(y,null).flat().filter(Boolean)})}
+ return o}
+function xTog(k){st.xh[k]=!st.xh[k];if(st.xh[k])st.xi[k]=false;render()}
+function xHi(k){st.xi[k]=!st.xi[k];if(st.xi[k])st.xh[k]=false;render()}
+function xAll(){st.xh={};st.xi={};render()}
+function xView(v){st.xv=v;render()}
+function crossView(){const v=st.xv,per=xPeriods(v),vis=XS.filter(S=>!st.xh[S.k]);
+ per.forEach(p=>{p.v={};XS.forEach(S=>{const a=p.days.map(d=>val(S.k,d)).filter(x=>x!=null);p.v[S.k]=a.length?a.reduce((x,y)=>x+y,0)/a.length:null})});
+ st.xd=per;
+ const lm=Math.max(120,Math.ceil(Math.max(0,...per.map(p=>p.v.lost||0))/30)*30),mx={sleep:12,food:10,lost:lm,mood:10,plan:100};
+ const U={sleep:v=>hm(v),food:v=>r1(v)+' / 10',lost:v=>fmtS('lost',v),mood:v=>r1(v)+' / 10',plan:v=>Math.round(v)+' %'};
+ st.xu=U;
+ const H=270,T=14,B=28,n=per.length,X=i=>XL+(n==1?(XW-XL-XR)/2:(XW-XL-XR)*i/(n-1)),Y=p=>T+(H-T-B)*(1-p/100);
+ let h='<div class="tabs" style="margin-top:14px">'+[['day','Por día'],['week','Por semana'],['month','Por mes'],['year','Por año']].map(([k,l])=>`<button class="${k==v?'on':''}" onclick="xView('${k}')">${l}</button>`).join('')+'</div>';
+ h+='<div class="card"><div class="chips" style="margin-top:0">'+XS.map(S=>{const off=st.xh[S.k],hi=st.xi[S.k];return`<span class="xc2${off?' off':''}${hi?' hi':''}" style="--cc:${S.c}"><button type="button" class="xa" aria-pressed="${!off}" onclick="xTog('${S.k}')"><i></i>${S.n}</button><button type="button" class="xb" aria-label="Destacar ${S.n}" aria-pressed="${!!hi}" onclick="xHi('${S.k}')">★</button></span>`}).join('')+'<button type="button" class="chp" onclick="xAll()">Todas</button></div>';
+ h+=`<p class="mu">${v=='day'?'Últimos 30 días.':v=='week'?'Promedio semanal de las últimas 12 semanas.':v=='month'?'Promedio mensual de los últimos 12 meses.':'Promedio anual.'} Toca el círculo para ocultar una serie y la estrella para destacarla.</p>`;
+ if(!vis.length)h+='<p class="mu">Todas las series están ocultas. Toca “Todas” para verlas de nuevo.</p>';
+ let s=`<svg id="xsvg" viewBox="0 0 ${XW} ${H}" class="ch xc" role="img" aria-label="Gráfica de cruces" onpointerdown="xTip(event)" onpointermove="xTip(event)">`;
+ [0,25,50,75,100].forEach(t=>s+=`<line x1="${XL}" x2="${XW-XR}" y1="${Y(t)}" y2="${Y(t)}" stroke="var(--bd)"/><text x="${XL-5}" y="${Y(t)+3}" text-anchor="end">${t}%</text>`);
+ per.forEach((p,i)=>{if(n<=12||i==0||(i+1)%5==0)s+=`<text x="${X(i)}" y="${H-9}" text-anchor="middle">${p.l}</text>`});
+ s+=`<line id="xg" x1="-20" x2="-20" y1="${T}" y2="${H-B}" stroke="var(--mu)" stroke-dasharray="3 3" pointer-events="none"/>`;
+ const anyHi=vis.some(S=>st.xi[S.k]);
+ vis.forEach(S=>{const pts=per.map((p,i)=>p.v[S.k]==null?null:{x:X(i),y:Y(Math.max(0,Math.min(100,p.v[S.k]/mx[S.k]*100))),v:p.v[S.k],t:p.t}).filter(Boolean);
+  const hi=st.xi[S.k],op=anyHi&&!hi?.25:1,sw=hi?3.8:anyHi?1.6:2.2;
+  if(pts.length>1)s+=`<polyline fill="none" stroke="${S.c}" stroke-width="${sw}" stroke-linejoin="round" stroke-linecap="round" opacity="${op}" points="${pts.map(q=>q.x.toFixed(1)+','+q.y.toFixed(1)).join(' ')}"/>`;
+  pts.forEach(q=>s+=`<circle cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="${hi?4.2:3}" fill="${S.c}" opacity="${op}"><title>${q.t} · ${S.n}: ${U[S.k](q.v)}</title></circle>`)});
+ s+='</svg>';
+ h+=s+`<div class="xtip" id="xtip"><span class="mu">Toca o desliza sobre la gráfica para ver los valores reales de cada punto.</span></div>`;
+ h+=`<p class="mu">Cada serie se muestra de 0 a 100 % de su propia escala: sueño 0–12 h, alimentación y ánimo 0–10, tiempo perdido 0–${lm} min y cumplimiento 0–100 %.</p></div>`;
+ return h}
+function xTip(ev){const sv=document.getElementById('xsvg'),per=st.xd;if(!sv||!per||!per.length)return;
+ const r=sv.getBoundingClientRect(),n=per.length,x=(ev.clientX-r.left)/r.width*XW;
+ const i=n==1?0:Math.max(0,Math.min(n-1,Math.round((x-XL)/(XW-XL-XR)*(n-1)))),p=per[i],gx=n==1?XL+(XW-XL-XR)/2:XL+(XW-XL-XR)*i/(n-1);
+ const g=document.getElementById('xg');g.setAttribute('x1',gx);g.setAttribute('x2',gx);
+ document.getElementById('xtip').innerHTML=`<b>${esc(p.t)}</b>`+XS.filter(S=>!st.xh[S.k]).map(S=>`<span><i style="background:${S.c}"></i>${S.n}: <b>${p.v[S.k]==null?'sin datos':st.xu[S.k](p.v[S.k])}</b></span>`).join('')}
+
+/* ---------- Modo oscuro / claro ---------- */
+function themeNow(){const r=document.documentElement;return r.dataset.theme||(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}
+function themeLbl(){const b=$('#th');if(b)b.textContent=themeNow()=='dark'?'☀ Claro':'☾ Oscuro'}
+function theme(){const n=themeNow()=='dark'?'light':'dark';document.documentElement.dataset.theme=n;try{localStorage.setItem('bit_theme',n)}catch(e){}themeLbl()}
+
+/* ---------- Exportar / importar / sincronización ---------- */
 function exp(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(db)],{type:'application/json'}));a.download='bitacora-'+iso(new Date())+'.json';a.click()}
-function imp(f){if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);db.sleep={...db.sleep,...d.sleep};db.food={...db.food,...d.food};persist();render();window.cloud&&cloud.push()}catch(e){alert('El archivo no es válido.')}};r.readAsText(f)}
+function imp(f){if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);SECS.forEach(s=>{db[s]={...db[s],...(d[s]||{})}});persist();st.cf=null;st.mf=null;render();window.cloud&&cloud.push()}catch(e){alert('El archivo no es válido.')}};r.readAsText(f)}
+function onSync(){if(st.cf&&!st.cf.dirty)st.cf=null;if(st.mf&&!st.mf.dirty)st.mf=null}
+themeLbl();
 render();
 </script>
 <script type="module">
@@ -184,11 +612,11 @@ const EMAIL="barbosagalanyg@gmail.com";
 const app=initializeApp(FIREBASE_CONFIG),auth=getAuth(app),fs=getFirestore(app);
 let uid=null,unsub=null,first=true;
 const ref=(s,d)=>doc(fs,'users',uid,'entries',s+'_'+d);
-const put=(s,d,e)=>setDoc(ref(s,d),{sec:s,date:d,e}).catch(()=>{});
+const put=(s,d,e)=>setDoc(ref(s,d),{sec:s,date:d,e:JSON.parse(JSON.stringify(e))}).catch(()=>{});
 window.cloud={
  save:(s,d,e)=>{if(uid)put(s,d,e)},
  del:(s,d)=>{if(uid)deleteDoc(ref(s,d)).catch(()=>{})},
- push:()=>{if(uid)for(const s of['sleep','food'])for(const d in db[s])put(s,d,db[s][d])},
+ push:()=>{if(uid)for(const s of SECS)for(const d in db[s])put(s,d,db[s][d])},
  login:async p=>{document.getElementById('lgerr').textContent='';try{await signInWithEmailAndPassword(auth,EMAIL,p)}catch(e){document.getElementById('lgerr').textContent='Contraseña incorrecta o sin conexión.'}},
  out:()=>signOut(auth)
 };
@@ -197,11 +625,12 @@ onAuthStateChanged(auth,u=>{
  if(unsub){unsub();unsub=null}
  if(!u)return;first=true;
  unsub=onSnapshot(collection(fs,'users',uid,'entries'),snap=>{
-  const c={sleep:{},food:{}};
+  const c={};for(const s of SECS)c[s]={};
   snap.forEach(x=>{const v=x.data();if(c[v.sec])c[v.sec][v.date]=v.e});
-  if(first){first=false;for(const s of['sleep','food'])for(const d in db[s])if(!c[s][d]){c[s][d]=db[s][d];put(s,d,db[s][d])}}
-  db.sleep=c.sleep;db.food=c.food;persist();
-  const a=document.activeElement;if(!a||!/^(TEXTAREA|INPUT)$/.test(a.tagName))render();
+  if(first){first=false;for(const s of SECS)for(const d in db[s])if(!c[s][d]){c[s][d]=db[s][d];put(s,d,db[s][d])}}
+  for(const s of SECS)db[s]=c[s];
+  persist();window.onSync&&onSync();
+  const a=document.activeElement;if(!a||!/^(TEXTAREA|INPUT|SELECT)$/.test(a.tagName))render();
  });
 });
 </script>
