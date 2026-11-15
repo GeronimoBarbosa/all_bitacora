@@ -125,6 +125,12 @@ input[type=color]{width:52px;height:42px;padding:2px;border:1px solid var(--bd);
 .cr input[type=text]{margin:0;flex:1;min-width:0}
 .cr .sx{width:6px;align-self:stretch;min-height:24px;border-radius:3px;flex:none}
 .cr .nm{flex:1;min-width:0;overflow-wrap:anywhere}
+.xc.wide{touch-action:auto}
+/* ---- emociones: buscador pequeño y chips propios ---- */
+input[type=text].sm{max-width:240px;padding:6px 10px;font-size:.9rem}
+.chp.add{border-style:dashed}
+.chp .x{margin-left:8px;color:var(--mu);font-weight:700}
+.lnk{border:0;background:none;color:var(--ac);text-decoration:underline;cursor:pointer;padding:8px 0;font-size:.9rem}
 @media(max-width:420px){.tabs button{padding:8px 11px}.ib{width:56px}}
 </style>
 </head>
@@ -235,6 +241,14 @@ const catsData=()=>{const c=db.cfg&&db.cfg.cats;return c&&Array.isArray(c.items)
 const catList=()=>[...Object.keys(CATN).map(id=>({id,n:CATN[id],col:'var(--k-'+id+')',base:1})),...catsData().filter(x=>x&&x.id&&x.n).map(x=>({id:x.id,n:String(x.n),col:/^#[0-9a-f]{6}$/i.test(x.c)?x.c:'#7d8a97',base:0}))];
 const catOf=id=>{const l=catList();return l.find(x=>x.id==id)||l.find(x=>x.id=='otro')};
 const IMP=[['na','No tuve que hacer nada importante hoy'],['no','No lo hice'],['si','Sí lo hice']];
+/* Emociones propias: se guardan en cfg_emos → {items:['nombre',...]} (misma ruta users/{uid}/entries) */
+const emosCustom=()=>{const c=db.cfg&&db.cfg.emos;return c&&Array.isArray(c.items)?c.items.filter(x=>typeof x=='string'&&x):[]};
+const nrm=t=>String(t).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+const emoAll=extra=>{const o=[...EMO];[...emosCustom(),...(extra||[])].forEach(x=>{if(!o.some(y=>nrm(y)==nrm(x)))o.push(x)});return o};
+const emoNames=()=>{const f=[],ms=Object.values(db.mood);ms.forEach(m=>((m&&m.emo)||[]).forEach(e=>f.push(e)));const l=emoAll(f);if(ms.some(m=>m&&m.other))l.push('otro');return l};
+const legacyEmo=e=>{const a=[...(e.emo||[])];if(e.other&&!a.includes(e.other))a.push(e.other);return a}; // el antiguo "otro" pasa a ser una emoción más
+function emosSave(items){db.cfg.emos={items};persist();window.cloud&&cloud.save('cfg','emos',db.cfg.emos)}
+function learnEmos(l){const b=emoAll([]),nw=l.filter(x=>!b.some(y=>nrm(y)==nrm(x)));if(nw.length)emosSave([...emosCustom(),...nw])}
 const ST={pendiente:'Pendiente',hecho:'Hecho',movido:'Movido',nohecho:'No hecho'};
 const SECNAME={close:'Cierre del día',plan:'Calendario',sleep:'Sueño',food:'Alimentación',lost:'Tiempo perdido',mood:'Ánimo',diary:'Diario',cross:'Cruces'};
 /* ===================== fin de la configuración ===================== */
@@ -250,7 +264,7 @@ let db={};SECS.forEach(s=>db[s]={});
 try{const d=JSON.parse(localStorage.getItem('bitacora'));if(d)SECS.forEach(s=>db[s]=d[s]||{})}catch(e){}
 const persist=()=>{try{localStorage.setItem('bitacora',JSON.stringify(db))}catch(e){alert('No se pudo guardar en este navegador')}};
 const TODAY=iso(new Date());
-let st={sec:'close',view:'day',date:TODAY,score:null,cd:TODAY,pd:add(TODAY,1),open:null,flash:'',cf:null,mf:null,xv:'day',xh:{},xi:{},xd:null,dq:'',dfrom:'',dto:'',demo:'',dlim:30};
+let st={sec:'close',view:'day',date:TODAY,score:null,cd:TODAY,pd:add(TODAY,1),open:null,flash:'',cf:null,mf:null,xv:'all',xw:TODAY,xsl:null,xh:{},xi:{},xd:null,dq:'',dfrom:'',dto:'',demo:'',dlim:30};
 
 const tm=t=>{const[a,b]=String(t).split(':');return +a*60+ +b};
 const hh=m=>{m=((Math.round(m)%1440)+1440)%1440;return pad(Math.floor(m/60))+':'+pad(m%60)};
@@ -301,7 +315,7 @@ function label(){const d=P(st.date),v=st.view;
  return''+d.getFullYear()}
 const go=d=>{st.date=d;st.view='day';render()};
 
-function tab(k){st.sec=k;st.open=null;st.flash='';render()}
+function tab(k){st.sec=k;st.open=null;st.flash='';st.xsl=null;st.emoEdit=false;render()}
 function render(){
  let h='<div class="tabs">'+Object.keys(SECNAME).map(k=>`<button class="${k==st.sec?'on':''}" onclick="tab('${k}')">${SECNAME[k]}</button>`).join('')+'</div>';
  if(CFG[st.sec]){
@@ -309,7 +323,9 @@ function render(){
   h+='<div class="card"><div class="nav"><button class="btn" aria-label="Anterior" onclick="nav(-1)">‹</button><strong>'+label()+'</strong><button class="btn" aria-label="Siguiente" onclick="nav(1)">›</button></div>';
   h+=(st.view=='day'?dayView():periodView())+'</div>'}
  else h+=({close:closeView,plan:planView,diary:diaryView,cross:crossView})[st.sec]();
+ const ow=document.getElementById('xwrap');if(ow)st.xsl=ow.scrollLeft;
  $('#app').innerHTML=h;
+ const nw=document.getElementById('xwrap');if(nw)nw.scrollLeft=st.xsl==null?nw.scrollWidth:st.xsl;
  if(st.sec=='sleep'&&st.view=='day')live();
  if(st.sec=='close')clive();
  if(st.sec=='diary')diaryList()}
@@ -351,20 +367,35 @@ function saveLost(){const v=$('#lmin').value;if(v===''||isNaN(+v)||+v<0)return a
 /* Ánimo: selector reutilizable (st[key] guarda el estado del formulario) */
 function scoreBtns(key,f,sec,cur){return`<div class="sc">`+[...Array(10)].map((_,i)=>{const k=col(sec,i+1);return`<button type="button" class="${cur==i+1?'on':''}" style="background:${k.c};color:${k.f}" onclick="scTap('${key}','${f}',${i+1},this)">${i+1}</button>`}).join('')+'</div>'}
 function scTap(key,f,n,el){const c=st[key];c[f]=n;c.dirty=true;st.flash='';el.parentNode.querySelectorAll('button').forEach((b,i)=>b.classList.toggle('on',i+1==n))}
-function moodBox(key){const c=st[key];
- return`<label>Ánimo (1–10)</label>${scoreBtns(key,'mood','mood',c.mood)}<p class="mu" style="margin:0">1 = muy mal. 10 = muy bien.</p><label>Emociones (elige las que quieras)</label><div class="chips">${EMO.map(e=>`<button type="button" class="chp${c.emo.includes(e)?' on':''}" onclick="emoTap('${key}','${e}',this)">${e}</button>`).join('')}<button type="button" class="chp${c.otroOn?' on':''}" onclick="emoTap('${key}','',this)">Otro</button></div><input type="text" id="${key}_o" placeholder="¿Qué otra emoción?" value="${qa(c.other)}"${c.otroOn?'':' hidden'} oninput="st['${key}'].other=this.value;st['${key}'].dirty=true">`}
-function emoTap(key,e,el){const c=st[key];c.dirty=true;st.flash='';
- if(e){const i=c.emo.indexOf(e);if(i<0)c.emo.push(e);else c.emo.splice(i,1);el.classList.toggle('on',i<0)}
- else{c.otroOn=!c.otroOn;el.classList.toggle('on',c.otroOn);const o=document.getElementById(key+'_o');o.hidden=!c.otroOn;if(c.otroOn)o.focus()}}
+function moodBox(key){const c=st[key];if(c.q==null)c.q='';
+ return`<label>Ánimo (1–10)</label>${scoreBtns(key,'mood','mood',c.mood)}<p class="mu" style="margin:0">1 = muy mal. 10 = muy bien.</p><label>Emociones (elige las que quieras)</label><input type="text" class="sm" id="${key}_q" placeholder="Buscar emoción…" autocomplete="off" value="${qa(c.q)}" oninput="emoSearch('${key}',this.value)"><div class="chips" id="${key}_chips">${emoChips(key)}</div>`}
+function emoChips(key){const c=st[key];if(!c)return'';const q=nrm(c.q||''),all=emoAll(c.emo),cust=emosCustom(),ed=!!st.emoEdit;
+ let h=all.filter(e=>!q||nrm(e).includes(q)).map(e=>{const isC=cust.includes(e);
+  return`<button type="button" class="chp${c.emo.includes(e)&&!(ed&&isC)?' on':''}" data-e="${qa(e)}" onclick="${ed&&isC?'emoDel':'emoTap'}('${key}',this)">${esc(e)}${ed&&isC?'<span class="x" aria-label="Quitar">✕</span>':''}</button>`}).join('');
+ if(q&&!all.some(e=>nrm(e)==q))h+=`<button type="button" class="chp add" onclick="emoAdd('${key}')">＋ Agregar emoción “${esc((c.q||'').trim())}”</button>`;
+ if(cust.length||ed)h+=`<div style="flex-basis:100%"><button type="button" class="lnk" onclick="emoEditToggle('${key}')">${ed?'Listo':'Quitar emociones que agregué'}</button></div>`;
+ return h}
+function emoRefresh(key){const el=document.getElementById(key+'_chips');if(el)el.innerHTML=emoChips(key)}
+function emoSearch(key,v){st[key].q=v;emoRefresh(key)}
+function emoTap(key,el){const c=st[key],e=el.dataset.e,i=c.emo.indexOf(e);c.dirty=true;st.flash='';if(i<0)c.emo.push(e);else c.emo.splice(i,1);el.classList.toggle('on',i<0)}
+function emoAdd(key){const c=st[key],n=(c.q||'').trim().toLowerCase();if(!n)return;
+ if(n.length>30)return alert('El nombre es muy largo (máximo 30 letras).');
+ const ex=emoAll(c.emo).find(x=>nrm(x)==nrm(n));
+ if(!ex)emosSave([...emosCustom(),n]);
+ const nm=ex||n;if(!c.emo.includes(nm))c.emo.push(nm);
+ c.dirty=true;c.q='';st.flash='';const i=document.getElementById(key+'_q');if(i)i.value='';emoRefresh(key)}
+function emoEditToggle(key){st.emoEdit=!st.emoEdit;emoRefresh(key)}
+function emoDel(key,el){const e=el.dataset.e;if(!confirm('¿Quitar la emoción “'+e+'” de tu lista? Los registros que ya la usan no cambian.'))return;
+ emosSave(emosCustom().filter(x=>x!=e));['cf','mf'].forEach(k=>{const c=st[k];if(c){const i=c.emo.indexOf(e);if(i>=0){c.emo.splice(i,1);c.dirty=true}}});emoRefresh(key)}
 function dayMood(){const d=st.date,e=db.mood[d]||{};
- if(!st.mf||st.mf.date!=d)st.mf={date:d,dirty:false,mood:e.score||null,emo:[...(e.emo||[])],otroOn:!!e.other,other:e.other||''};
+ if(!st.mf||st.mf.date!=d)st.mf={date:d,dirty:false,mood:e.score||null,emo:legacyEmo(e),q:''};
  let h=`<input type="date" aria-label="Ir a una fecha" value="${d}" onchange="if(this.value){st.date=this.value;render()}">`+moodBox('mf');
  h+=`<div class="acts"><button class="btn pri" onclick="saveMood()">Guardar</button>${db.mood[d]?'<button class="btn" onclick="del()">Borrar</button>':''}</div>`;
  const rec=Object.keys(db.mood).sort().reverse().slice(0,10);
  return h+'<h3>Registros recientes</h3>'+(rec.length?rec.map(x=>{const m=db.mood[x],t=(m.emo||[]).concat(m.other?[m.other]:[]).join(', ');return`<div class="nt" onclick="go('${x}')"><b>${fs(x)}</b>: ${fmtS('mood',m.score)}${t?'<br>'+esc(t):''}</div>`}).join(''):'<p class="mu">Aún no hay registros de ánimo.</p>')}
-function saveMood(){const c=st.mf,d=st.date,o=c.otroOn&&c.other.trim()?c.other.trim():'';
- if(!c.mood&&!c.emo.length&&!o)return alert('Elige un ánimo del 1 al 10 o al menos una emoción.');
- const e={score:c.mood||null,emo:[...c.emo],other:o};db.mood[d]=e;st.mf=null;persist();render();window.cloud&&cloud.save('mood',d,e)}
+function saveMood(){const c=st.mf,d=st.date;
+ if(!c.mood&&!c.emo.length)return alert('Elige un ánimo del 1 al 10 o al menos una emoción.');
+ learnEmos(c.emo);const e={score:c.mood||null,emo:[...c.emo],other:''};db.mood[d]=e;st.mf=null;persist();render();window.cloud&&cloud.save('mood',d,e)}
 
 /* ---------- Gráficas y tablas (barras + cuadrícula) ---------- */
 function cell(x,big){if(!x)return'<i class="e"></i>';const v=val(st.sec,x),k=v==null?null:col(st.sec,v);
@@ -410,7 +441,7 @@ function lastBed(d){const k=Object.keys(db.sleep).filter(x=>x<d&&db.sleep[x].bed
  if(k)return db.sleep[k].bed;
  const b=tplBlocks(add(d,-1)).find(x=>/acostar/i.test(x.t));return b?b.s:'19:00'}
 function cfInit(d){const sl=db.sleep[d]||{},fo=db.food[d]||{},lo=db.lost[d]||{},mo=db.mood[d]||{},di=db.diary[d]||{},pl=db.plan[d]||{};
- return{date:d,dirty:false,bed:sl.bed||lastBed(d),wake:sl.wake||wakeFor(d),food:fo.score||null,min:lo.min==null?'':lo.min,lnote:lo.note||'',mood:mo.score||null,emo:[...(mo.emo||[])],otroOn:!!mo.other,other:mo.other||'',diary:di.text||'',imp:pl.imp||null,cum:pl.cum==null?'':pl.cum,org:orgPref()}}
+ return{date:d,dirty:false,bed:sl.bed||lastBed(d),wake:sl.wake||wakeFor(d),food:fo.score||null,min:lo.min==null?'':lo.min,lnote:lo.note||'',mood:mo.score||null,emo:legacyEmo(mo),q:'',diary:di.text||'',imp:pl.imp||null,cum:pl.cum==null?'':pl.cum,org:orgPref()}}
 function cfSet(k,v){const c=st.cf;if(!c)return;c[k]=v;c.dirty=true;st.flash='';if(k=='bed'||k=='wake')clive()}
 function cfAdd(n){const c=st.cf;c.min=Math.max(0,(+c.min||0)+n);c.dirty=true;$('#clmin').value=c.min}
 function cfOrg(on){st.cf.org=on;st.cf.dirty=true;try{localStorage.setItem('bit_org',on?'1':'0')}catch(e){}}
@@ -452,8 +483,7 @@ function saveClose(){const c=st.cf,d=c.date;
  if(c.bed&&c.wake){const o=db.sleep[d]||{};set('sleep',{...o,bed:c.bed,wake:c.wake,note:o.note||''})}
  if(c.food){const o=db.food[d]||{};set('food',{...o,score:c.food,note:o.note||''})}
  if(c.min!==''&&!isNaN(+c.min)&&+c.min>=0)set('lost',{min:Math.round(+c.min),note:(c.lnote||'').trim()});else if(c.min==='')rm('lost');
- const o=c.otroOn&&(c.other||'').trim()?c.other.trim():'';
- if(c.mood||c.emo.length||o)set('mood',{score:c.mood||null,emo:[...c.emo],other:o});else rm('mood');
+ if(c.mood||c.emo.length){learnEmos(c.emo);set('mood',{score:c.mood||null,emo:[...c.emo],other:''})}else rm('mood');
  const tx=(c.diary||'').trim();
  if(tx)set('diary',{text:tx});else rm('diary');
  /* Lo más importante (imp) y % cumplido (cum) se guardan dentro del registro plan_AAAA-MM-DD */
@@ -572,7 +602,7 @@ function catsPanel(){const L=catList(),nc=st.nc||(st.nc={n:'',c:'#e8590c'});
 function diaryView(){
  return`<div class="card"><label style="margin-top:0">Buscar<input type="text" id="dq" placeholder="Buscar en el diario…" value="${qa(st.dq)}" oninput="st.dq=this.value;st.dlim=30;diaryList()"></label>`
  +`<div class="row"><label>Desde<input type="date" value="${st.dfrom}" onchange="st.dfrom=this.value;st.dlim=30;diaryList()"></label><label>Hasta<input type="date" value="${st.dto}" onchange="st.dto=this.value;st.dlim=30;diaryList()"></label></div>`
- +`<label>Emoción<select onchange="st.demo=this.value;st.dlim=30;diaryList()"><option value="">Todas</option>${[...EMO,'otro'].map(e=>`<option${st.demo==e?' selected':''}>${e}</option>`).join('')}</select></label>`
+ +`<label>Emoción<select onchange="st.demo=this.value;st.dlim=30;diaryList()"><option value="">Todas</option>${emoNames().map(e=>`<option${st.demo==e?' selected':''}>${esc(e)}</option>`).join('')}</select></label>`
  +`<div class="acts"><button class="btn" onclick="diaryClear()">Limpiar filtros</button></div><div id="dlist"></div></div>`}
 function diaryClear(){st.dq='';st.dfrom='';st.dto='';st.demo='';st.dlim=30;render()}
 function diaryList(){const el=$('#dlist');if(!el)return;
@@ -600,47 +630,63 @@ const XS=[
  {k:'mood',n:'Ánimo',c:'#d6336c'},
  {k:'plan',n:'Cumplimiento',c:'#0c8599'}
 ];
-const XW=600,XL=36,XR=10,XMAX=130,LOST_MAX=120; // XMAX: tope de la gráfica (%); LOST_MAX: minutos perdidos que equivalen a 0 %
-function xPeriods(v){const o=[],n=new Date();
- if(v=='day'){for(let i=29;i>=0;i--){const d=add(TODAY,-i);o.push({l:+d.slice(8),t:P(d).toLocaleDateString('es',{weekday:'short',day:'numeric',month:'short'}),days:[d]})}}
- else if(v=='week'){const m0=mon(TODAY);for(let i=11;i>=0;i--){const w=add(m0,-7*i);o.push({l:fs(w),t:'Semana del '+fs(w),days:weekDays(w)})}}
- else if(v=='month'){for(let i=11;i>=0;i--){const dt=new Date(n.getFullYear(),n.getMonth()-i,1),y=dt.getFullYear(),m=dt.getMonth();o.push({l:MS[m],t:dt.toLocaleDateString('es',{month:'long',year:'numeric'}),days:weeksOf(y,m).flat().filter(Boolean)})}}
- else{let y0=n.getFullYear()-1;SECS.forEach(s=>Object.keys(db[s]).forEach(k=>{const y=+k.slice(0,4);if(y>=2000&&y<y0)y0=y}));
-  for(let y=y0;y<=n.getFullYear();y++)o.push({l:''+y,t:'Año '+y,days:weeksOf(y,null).flat().filter(Boolean)})}
+const XL=36,XR=10,XMAX=130,LOST_MAX=120,XSP=14; // XMAX: tope de la gráfica (%); LOST_MAX: minutos perdidos que equivalen a 0 %; XSP: separación mínima entre puntos (px)
+let XW=600; // ancho del gráfico: crece (con desplazamiento horizontal) cuando hay muchos puntos
+function xFirst(){let f=null;XS.forEach(S=>Object.keys(db[S.k]||{}).forEach(d=>{if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&d<=TODAY&&(!f||d<f)&&val(S.k,d)!=null)f=d}));return f}
+function xPeriods(v){const o=[],n=new Date(),dl=d=>P(d).toLocaleDateString('es',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+ if(v=='all'){const f=xFirst();if(f)for(let d=f;d<=TODAY;d=add(d,1))o.push({l:fs(d),t:dl(d),days:[d]})}
+ else if(v=='wk'){weekDays(st.xw).forEach((d,i)=>o.push({l:DL[i]+' '+(+d.slice(8)),t:dl(d),days:[d]}))}
+ else if(v=='weeks'){const f=xFirst();if(f)for(let w=mon(f);w<=TODAY;w=add(w,7))o.push({l:fs(w),t:'Semana del '+fs(w)+' '+P(w).getFullYear(),days:weekDays(w)})}
+ else{for(let i=11;i>=0;i--){const dt=new Date(n.getFullYear(),n.getMonth()-i,1),y=dt.getFullYear(),m=dt.getMonth();o.push({l:MS[m],t:dt.toLocaleDateString('es',{month:'long',year:'numeric'}),days:weeksOf(y,m).flat().filter(Boolean)})}}
  return o}
 function xTog(k){st.xh[k]=!st.xh[k];if(st.xh[k])st.xi[k]=false;render()}
 function xHi(k){st.xi[k]=!st.xi[k];if(st.xi[k])st.xh[k]=false;render()}
 function xAll(){st.xh={};st.xi={};render()}
-function xView(v){st.xv=v;render()}
+function xView(v){st.xv=v;st.xsl=null;render()}
+function xwNav(n){st.xw=add(st.xw,7*n);st.xsl=null;render()}
+function xwSet(d){if(d){st.xw=d;st.xsl=null;render()}}
 function crossView(){const v=st.xv,per=xPeriods(v),vis=XS.filter(S=>!st.xh[S.k]);
- per.forEach(p=>{p.v={};XS.forEach(S=>{const a=p.days.map(d=>val(S.k,d)).filter(x=>x!=null);p.v[S.k]=a.length?a.reduce((x,y)=>x+y,0)/a.length:null})});
+ per.forEach(p=>{const ds=p.days.filter(d=>d<=TODAY);p.v={};
+  XS.forEach(S=>{const a=ds.map(d=>val(S.k,d)).filter(x=>x!=null);p.v[S.k]=a.length?a.reduce((x,y)=>x+y,0)/a.length:null});
+  p.im={si:0,no:0,na:0};ds.forEach(d=>{const e=db.plan[d];if(e&&e.imp&&p.im[e.imp]!=null)p.im[e.imp]++})});
  st.xd=per;
-const NZ={sleep:v=>v/HORARIOS.metaSueno*100,food:v=>v*10,mood:v=>v*10,plan:v=>v,lost:v=>(1-Math.min(Math.max(v,0),LOST_MAX)/LOST_MAX)*100}; // % de cada serie: sueño 100 % = meta; tiempo perdido invertido (0 min = 100 %)
+ const NZ={sleep:v=>v/HORARIOS.metaSueno*100,food:v=>v*10,mood:v=>v*10,plan:v=>v,lost:v=>(1-Math.min(Math.max(v,0),LOST_MAX)/LOST_MAX)*100}; // % de cada serie: sueño 100 % = meta; tiempo perdido invertido (0 min = 100 %)
  const U={sleep:v=>hm(v),food:v=>r1(v)+' / 10',lost:v=>fmtS('lost',v),mood:v=>r1(v)+' / 10',plan:v=>Math.round(v)+' %'};
  st.xu=U;
- const H=270,T=14,B=28,n=per.length,X=i=>XL+(n==1?(XW-XL-XR)/2:(XW-XL-XR)*i/(n-1)),Y=p=>T+(H-T-B)*(1-p/XMAX);
- let h='<div class="tabs" style="margin-top:14px">'+[['day','Por día'],['week','Por semana'],['month','Por mes'],['year','Por año']].map(([k,l])=>`<button class="${k==v?'on':''}" onclick="xView('${k}')">${l}</button>`).join('')+'</div>';
- h+='<div class="card"><div class="chips" style="margin-top:0">'+XS.map(S=>{const off=st.xh[S.k],hi=st.xi[S.k];return`<span class="xc2${off?' off':''}${hi?' hi':''}" style="--cc:${S.c}"><button type="button" class="xa" aria-pressed="${!off}" onclick="xTog('${S.k}')"><i></i>${S.n}</button><button type="button" class="xb" aria-label="Destacar ${S.n}" aria-pressed="${!!hi}" onclick="xHi('${S.k}')">★</button></span>`}).join('')+'<button type="button" class="chp" onclick="xAll()">Todas</button></div>';
- h+=`<p class="mu">${v=='day'?'Últimos 30 días.':v=='week'?'Promedio semanal de las últimas 12 semanas.':v=='month'?'Promedio mensual de los últimos 12 meses.':'Promedio anual.'} Toca el círculo para ocultar una serie y la estrella para destacarla.</p>`;
- if(!vis.length)h+='<p class="mu">Todas las series están ocultas. Toca “Todas” para verlas de nuevo.</p>';
- let s=`<svg id="xsvg" viewBox="0 0 ${XW} ${H}" class="ch xc" role="img" aria-label="Gráfica de cruces" onpointerdown="xTip(event)" onpointermove="xTip(event)">`;
+ const n=per.length,wide=n>1&&(n-1)*XSP>700;XW=wide?XL+XR+(n-1)*XSP:600;
+ const H=290,T=14,B=46,X=i=>XL+(n==1?(XW-XL-XR)/2:(XW-XL-XR)*i/(n-1)),Y=p=>T+(H-T-B)*(1-p/XMAX);
+ let h='<div class="tabs" style="margin-top:14px">'+[['all','Todos los días'],['wk','Una semana'],['weeks','Todas las semanas'],['month','Por mes']].map(([k,l])=>`<button class="${k==v?'on':''}" onclick="xView('${k}')">${l}</button>`).join('')+'</div>';
+ h+='<div class="card">';
+ if(v=='wk'){const w=weekDays(st.xw);h+=`<div class="nav"><button class="btn" aria-label="Semana anterior" onclick="xwNav(-1)">‹</button><strong>${fs(w[0])} – ${fs(w[6])} ${P(w[6]).getFullYear()}</strong><button class="btn" aria-label="Semana siguiente" onclick="xwNav(1)">›</button></div><input type="date" aria-label="Ir a la semana de una fecha" value="${st.xw}" onchange="xwSet(this.value)" style="margin-bottom:12px">`}
+ h+='<div class="chips" style="margin-top:0">'+XS.map(S=>{const off=st.xh[S.k],hi=st.xi[S.k];return`<span class="xc2${off?' off':''}${hi?' hi':''}" style="--cc:${S.c}"><button type="button" class="xa" aria-pressed="${!off}" onclick="xTog('${S.k}')"><i></i>${S.n}</button><button type="button" class="xb" aria-label="Destacar ${S.n}" aria-pressed="${!!hi}" onclick="xHi('${S.k}')">★</button></span>`}).join('')+'<button type="button" class="chp" onclick="xAll()">Mostrar todas</button></div>';
+ h+=`<p class="mu">${v=='all'?'Todos los días con datos, desde el primero que registraste.':v=='wk'?'Los 7 días de la semana elegida.':v=='weeks'?'Promedio de cada semana, desde la primera con datos.':'Promedio mensual de los últimos 12 meses.'} Toca el círculo para ocultar una serie y la estrella para destacarla.${wide?' Desliza la gráfica hacia los lados para ver todo el período.':''}</p>`;
+ if(!n){return h+'<p class="mu">Aún no hay datos registrados para mostrar.</p></div>'}
+ if(!vis.length)h+='<p class="mu">Todas las series están ocultas. Toca “Mostrar todas” para verlas de nuevo.</p>';
+ const sp=n>1?(XW-XL-XR)/(n-1):0,step=sp?Math.max(1,Math.ceil(40/sp)):1;
+ let s=`<svg id="xsvg" viewBox="0 0 ${XW} ${H}" class="ch xc${wide?' wide':''}"${wide?` style="width:${XW}px;max-width:none"`:''} role="img" aria-label="Gráfica de cruces" onpointerdown="xTip(event)" onpointermove="xTip(event)">`;
  [0,25,50,75,100,130].forEach(t=>s+=`<line x1="${XL}" x2="${XW-XR}" y1="${Y(t)}" y2="${Y(t)}" stroke="${t==100?'var(--mu)':'var(--bd)'}"/><text x="${XL-5}" y="${Y(t)+3}" text-anchor="end">${t}%</text>`);
- per.forEach((p,i)=>{if(n<=12||i==0||(i+1)%5==0)s+=`<text x="${X(i)}" y="${H-9}" text-anchor="middle">${p.l}</text>`});
+ s+=`<text x="${XL-5}" y="${H-B+17}" text-anchor="end">Imp.</text>`;
+ per.forEach((p,i)=>{if((n-1-i)%step==0)s+=`<text x="${X(i)}" y="${H-9}" text-anchor="middle">${esc(p.l)}</text>`;
+  const im=p.im;
+  if(p.days.length==1){if(im.si)s+=`<text x="${X(i)}" y="${H-B+17}" text-anchor="middle" style="fill:#2f9e44;font-size:14px;font-weight:700">✓</text>`;else if(im.no)s+=`<text x="${X(i)}" y="${H-B+17}" text-anchor="middle" style="fill:#e03131;font-size:14px;font-weight:700">✗</text>`}
+  else if(n<=14&&(im.si||im.no))s+=`<text x="${X(i)}" y="${H-B+17}" text-anchor="middle" style="font-size:11px;font-weight:700">${im.si?`<tspan style="fill:#2f9e44">${im.si}✓</tspan>`:''}${im.si&&im.no?'<tspan dx="3"> </tspan>':''}${im.no?`<tspan style="fill:#e03131">${im.no}✗</tspan>`:''}</text>`});
  s+=`<line id="xg" x1="-20" x2="-20" y1="${T}" y2="${H-B}" stroke="var(--mu)" stroke-dasharray="3 3" pointer-events="none"/>`;
- const anyHi=vis.some(S=>st.xi[S.k]);
+ const anyHi=vis.some(S=>st.xi[S.k]),rd=n>60?1.8:3;
  vis.forEach(S=>{const pts=per.map((p,i)=>p.v[S.k]==null?null:{x:X(i),y:Y(Math.max(0,Math.min(XMAX,NZ[S.k](p.v[S.k])))),v:p.v[S.k],t:p.t}).filter(Boolean);
   const hi=st.xi[S.k],op=anyHi&&!hi?.25:1,sw=hi?3.8:anyHi?1.6:2.2;
   if(pts.length>1)s+=`<polyline fill="none" stroke="${S.c}" stroke-width="${sw}" stroke-linejoin="round" stroke-linecap="round" opacity="${op}" points="${pts.map(q=>q.x.toFixed(1)+','+q.y.toFixed(1)).join(' ')}"/>`;
-  pts.forEach(q=>s+=`<circle cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="${hi?4.2:3}" fill="${S.c}" opacity="${op}"><title>${q.t} · ${S.n}: ${U[S.k](q.v)}</title></circle>`)});
+  pts.forEach(q=>s+=`<circle cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="${hi?rd+1.2:rd}" fill="${S.c}" opacity="${op}"><title>${q.t} · ${S.n}: ${U[S.k](q.v)}</title></circle>`)});
  s+='</svg>';
- h+=s+`<div class="xtip" id="xtip"><span class="mu">Toca o desliza sobre la gráfica para ver los valores reales de cada punto.</span></div>`;
- h+=`<p class="mu">Cada serie se muestra como % de su meta (100 % = meta). Sueño: 100 % = ${dur(Math.round(HORARIOS.metaSueno*60))} y la escala llega a 130 % (${hm(HORARIOS.metaSueno*1.3)}). Alimentación y ánimo: 10 / 10 = 100 %. Cumplimiento: 100 % = 100 %. Tiempo perdido va invertido: 0 min = 100 % (arriba) y ${LOST_MAX/60} h o más = 0 %.</p></div>`;
+ h+=`<div id="xwrap" style="overflow-x:auto">${s}</div><div class="xtip" id="xtip"><span class="mu">Toca o desliza sobre la gráfica para ver los valores reales de cada punto.</span></div>`;
+ h+=`<p class="mu">Cada serie se muestra como % de su meta (100 % = meta). Sueño: 100 % = ${dur(Math.round(HORARIOS.metaSueno*60))} y la escala llega a 130 % (${hm(HORARIOS.metaSueno*1.3)}). Alimentación y ánimo: 10 / 10 = 100 %. Cumplimiento: 100 % = 100 %. Tiempo perdido va invertido: 0 min = 100 % (arriba) y ${LOST_MAX/60} h o más = 0 %.</p>`;
+ h+=`<p class="mu">Fila “Imp.”: <b style="color:#2f9e44">✓</b> si hiciste lo más importante del día, <b style="color:#e03131">✗</b> si no lo hiciste, y vacío si no tenías nada importante.${v=='weeks'||v=='month'?' En semanas y meses se cuenta cuántos ✓ y ✗ hubo.':''}</p></div>`;
  return h}
 function xTip(ev){const sv=document.getElementById('xsvg'),per=st.xd;if(!sv||!per||!per.length)return;
  const r=sv.getBoundingClientRect(),n=per.length,x=(ev.clientX-r.left)/r.width*XW;
  const i=n==1?0:Math.max(0,Math.min(n-1,Math.round((x-XL)/(XW-XL-XR)*(n-1)))),p=per[i],gx=n==1?XL+(XW-XL-XR)/2:XL+(XW-XL-XR)*i/(n-1);
  const g=document.getElementById('xg');g.setAttribute('x1',gx);g.setAttribute('x2',gx);
- document.getElementById('xtip').innerHTML=`<b>${esc(p.t)}</b>`+XS.filter(S=>!st.xh[S.k]).map(S=>`<span><i style="background:${S.c}"></i>${S.n}: <b>${p.v[S.k]==null?'sin datos':st.xu[S.k](p.v[S.k])}</b></span>`).join('')}
+ const im=p.im,imt=p.days.length==1?(im.si?'✓ Sí lo hice':im.no?'✗ No lo hice':im.na?'No había nada importante':''):((im.si||im.no)?'✓ '+im.si+' · ✗ '+im.no:'');
+ document.getElementById('xtip').innerHTML=`<b>${esc(p.t)}</b>`+XS.filter(S=>!st.xh[S.k]).map(S=>`<span><i style="background:${S.c}"></i>${S.n}: <b>${p.v[S.k]==null?'sin datos':st.xu[S.k](p.v[S.k])}</b></span>`).join('')+(imt?`<span>Lo más importante: <b>${imt}</b></span>`:'')}
 
 /* ---------- Modo oscuro / claro ---------- */
 function themeNow(){const r=document.documentElement;return r.dataset.theme||(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}
