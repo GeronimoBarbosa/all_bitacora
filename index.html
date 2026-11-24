@@ -131,6 +131,12 @@ input[type=text].sm{max-width:240px;padding:6px 10px;font-size:.9rem}
 .chp.add{border-style:dashed}
 .chp .x{margin-left:8px;color:var(--mu);font-weight:700}
 .lnk{border:0;background:none;color:var(--ac);text-decoration:underline;cursor:pointer;padding:8px 0;font-size:.9rem}
+.al{margin:8px 0 0;padding:6px 10px;border-left:3px solid var(--bd);color:var(--mu);font-size:.85rem}
+.pbar{height:10px;background:var(--ef);border-radius:5px;overflow:hidden;margin:4px 0 0}
+.pbar i{display:block;height:100%;background:var(--ac);border-radius:5px}
+.gr{border-top:1px solid var(--bd);padding:8px 0 12px;margin-top:10px}
+details summary{cursor:pointer;margin-top:14px;color:var(--ac)}
+.lock #aip{display:none}
 @media(max-width:420px){.tabs button{padding:8px 11px}.ib{width:56px}}
 </style>
 </head>
@@ -141,11 +147,14 @@ input[type=text].sm{max-width:240px;padding:6px 10px;font-size:.9rem}
 <div id="app"></div>
 <div class="foot">
 <button class="btn" onclick="exp()">Exportar datos</button>
+<button class="btn" onclick="aiOpen('ia')">Exportar para IA</button>
+<button class="btn" onclick="aiOpen('bad')">Algo no va bien</button>
 <button class="btn" onclick="document.getElementById('imp').click()">Importar datos</button>
 <input type="file" id="imp" accept=".json" hidden onchange="imp(this.files[0])">
 <button class="btn" onclick="cloud.out()">Cerrar sesión</button>
 <span class="mu">Tus datos se guardan en la nube y se sincronizan entre dispositivos. Exportar sirve como copia de seguridad.</span>
 </div>
+<div class="card" id="aip" hidden></div>
 </main>
 <script>
 const $=s=>document.querySelector(s);
@@ -166,73 +175,29 @@ const qa=t=>esc(String(t==null?'':t)).replace(/"/g,'&quot;');
    Categorías: cole (colegio/proyectos) · comida · ejer (ejercicio) · desc (descanso) · otro
    Los bloques cuyo título contiene "Imprevisto" no cuentan en el % de cumplimiento.
    ===================================================================== */
-const _COL=[ // madrugada + colegio (lunes a viernes), con 2 bloques de imprevistos de 1 hora
- ['Levantarme y alistarme','03:50',30,'otro'],
- ['Comida','04:20',25,'comida'],
- ['Salir de casa · viaje al colegio','04:45',105,'otro'],
- ['Colegio','06:30',240,'cole'],
- ['Imprevistos','10:30',60,'otro'],
- ['Colegio','11:30',165,'cole'],
- ['Imprevistos','14:15',60,'otro']
-];
-const _LMJ=[..._COL, // lunes, miércoles, jueves
- ['Viaje a casa','15:15',120,'otro'],
- ['Entrenamiento (opcional)','17:30',30,'ejer'],
- ['Cena','18:00',30,'comida'],
- ['Aseo y cierre del día','18:30',30,'otro'],
- ['Acostarme','19:00',15,'desc']
+const _VAC=[ // vacaciones: la misma plantilla los 7 días
+ ['Levantarme y alistarme','06:00',30,'otro'],
+ ['Desayuno','06:30',30,'comida'],
+ ['Estudio: precálculo','07:00',120,'cole'],
+ ['Imprevistos','09:00',60,'otro'],
+ ['Entrenamiento','10:00',120,'ejer'],
+ ['Almuerzo','12:00',45,'comida'],
+ ['Descanso','12:45',75,'desc'],
+ ['Estudio / proyectos','14:00',120,'cole'],
+ ['Imprevistos','16:00',60,'otro'],
+ ['Tiempo libre','17:00',150,'desc'],
+ ['Cena','19:30',30,'comida'],
+ ['Aseo y cierre del día','20:00',45,'otro'],
+ ['Acostarme','21:00',15,'desc']
 ];
 const HORARIOS={
- inicioDia:'03:50',  // el calendario empieza aquí
- finDia:'21:00',     // y termina aquí
- metaSueno:9.5,        // horas de sueño ideal
- moverMin:30,        // minutos que mueve el botón "Más tarde"
+ inicioDia:'06:00',  // el calendario empieza aquí
+ finDia:'21:30',     // y termina aquí
+ // la meta de sueño ya no está aquí: se edita en la pestaña Sueño (cfg_goals.sleepH)
+ moverMin:30,
  // hora de levantarte por día (0 = domingo, 1 = lunes ... 6 = sábado)
- despertar:{0:'07:00',1:'03:50',2:'03:50',3:'03:50',4:'03:50',5:'03:50',6:'07:00'},
- plantilla:{
-  1:_LMJ,
-  2:[..._COL, // martes (Sena)
-   ['Sena','15:15',105,'cole'],
-   ['Viaje a casa','17:00',120,'otro'],
-   ['Cena','19:00',30,'comida'],
-   ['Aseo y cierre del día','19:30',30,'otro'],
-   ['Acostarme','20:00',15,'desc']],
-  3:_LMJ,
-  4:_LMJ,
-  5:[..._COL, // viernes
-   ['Fútbol con amigos','15:15',135,'ejer'],
-   ['Viaje a casa','17:30',60,'otro'],
-   ['Cena','18:30',30,'comida'],
-   ['Descanso','19:00',60,'desc'],
-   ['Aseo y cierre del día','20:00',30,'otro'],
-   ['Acostarme','20:30',15,'desc']],
-  6:[ // sábado
-   ['Levantarme','07:00',30,'otro'],
-   ['Desayuno','07:30',30,'comida'],
-   ['Descanso','08:00',150,'desc'],
-   ['Imprevistos','10:30',60,'otro'],
-   ['Descanso','11:30',120,'desc'],
-   ['Almuerzo','13:30',45,'comida'],
-   ['Descanso','14:15',105,'desc'],
-   ['Imprevistos','16:00',60,'otro'],
-   ['Descanso','17:00',60,'desc'],
-   ['Cena','18:00',45,'comida'],
-   ['Aseo y cierre del día','19:00',60,'otro'],
-   ['Acostarme','20:00',15,'desc']],
-  0:[ // domingo
-   ['Levantarme','07:00',30,'otro'],
-   ['Desayuno','07:30',30,'comida'],
-   ['Entrenamiento (opcional)','09:00',75,'ejer'],
-   ['Imprevistos','10:30',60,'otro'],
-   ['Descanso','11:30',120,'desc'],
-   ['Almuerzo','13:30',45,'comida'],
-   ['Descanso','14:15',105,'desc'],
-   ['Imprevistos','16:00',60,'otro'],
-   ['Descanso','17:00',60,'desc'],
-   ['Cena','18:00',45,'comida'],
-   ['Aseo y cierre del día','19:00',60,'otro'],
-   ['Acostarme','20:00',15,'desc']]
- }
+ despertar:{0:'06:00',1:'06:00',2:'06:00',3:'06:00',4:'06:00',5:'06:00',6:'06:00'},
+ plantilla:{0:_VAC,1:_VAC,2:_VAC,3:_VAC,4:_VAC,5:_VAC,6:_VAC}
 };
 const EMO=['tranquilo','feliz','motivado','realizado','agradecido','pensativo','cansado','estresado','ansioso','frustrado','triste','aburrido','arrepentido'];
 const CATN={cole:'Colegio/proyectos',comida:'Comida',ejer:'Ejercicio',desc:'Descanso',otro:'Otro'};
@@ -253,9 +218,13 @@ const ST={pendiente:'Pendiente',hecho:'Hecho',movido:'Movido',nohecho:'No hecho'
 const SECNAME={close:'Cierre del día',plan:'Calendario',sleep:'Sueño',food:'Alimentación',lost:'Tiempo perdido',mood:'Ánimo',diary:'Diario',cross:'Cruces'};
 /* ===================== fin de la configuración ===================== */
 
-const SECS=['sleep','food','lost','mood','diary','plan','cfg'];
+const SECS=['sleep','food','lost','mood','diary','plan','cfg','med','wk'];
+/* Metas editables: cfg_goals → {sleepH,medMin,lateMin,lowSleepH,lowSleepRun} (misma ruta users/{uid}/entries) */
+const GOALS_DEF={sleepH:9,medMin:20,lateMin:45,lowSleepH:8,lowSleepRun:3};
+const goals=()=>{const g={...GOALS_DEF},c=db.cfg&&db.cfg.goals;if(c&&typeof c=='object')Object.keys(GOALS_DEF).forEach(k=>{const v=+c[k];if(c[k]!=null&&c[k]!==''&&isFinite(v)&&v>=0)g[k]=v});return g};
+const metaS=()=>{const v=goals().sleepH;return v>=7&&v<=12?v:9}; // meta de sueño actual (horas)
 const CFG={
- sleep:{name:'Sueño',lo:6,mid:(6+HORARIOS.metaSueno)/2,hi:HORARIOS.metaSueno,max:12,ideal:HORARIOS.metaSueno,ticks:[0,3,6,9,12]},
+ sleep:{name:'Sueño',lo:6,get mid(){return(6+metaS())/2},get hi(){return metaS()},max:12,get ideal(){return metaS()},ticks:[0,3,6,9,12]},
  food:{name:'Alimentación',lo:1,mid:5,hi:10,max:10,ideal:10,ticks:[0,2,4,6,8,10]},
  lost:{name:'Tiempo perdido',lo:0,hi:120,inv:1,dyn:1,max:180,ideal:null,ticks:[0,30,60,90,120,150,180]},
  mood:{name:'Ánimo',lo:1,mid:5,hi:10,max:10,ideal:null,ticks:[0,2,4,6,8,10]}
@@ -321,7 +290,7 @@ function render(){
  if(CFG[st.sec]){
   h+='<div class="tabs" style="margin-top:8px">'+[['day','Día'],['week','Semana'],['month','Mes'],['year','Año']].map(([k,l])=>`<button class="${k==st.view?'on':''}" onclick="st.view='${k}';render()">${l}</button>`).join('')+'</div>';
   h+='<div class="card"><div class="nav"><button class="btn" aria-label="Anterior" onclick="nav(-1)">‹</button><strong>'+label()+'</strong><button class="btn" aria-label="Siguiente" onclick="nav(1)">›</button></div>';
-  h+=(st.view=='day'?dayView():periodView())+'</div>'}
+  h+=(st.view=='day'?dayView():periodView())+'</div>';if(st.sec=='sleep')h+=goalsCard()}
  else h+=({close:closeView,plan:planView,diary:diaryView,cross:crossView})[st.sec]();
  const ow=document.getElementById('xwrap');if(ow)st.xsl=ow.scrollLeft;
  $('#app').innerHTML=h;
@@ -332,21 +301,27 @@ function render(){
 
 /* ---------- Sueño, alimentación, tiempo perdido y ánimo: vista por día ---------- */
 function dayView(){const s=st.sec;if(s=='lost')return dayLost();if(s=='mood')return dayMood();
- const e=db[s][st.date]||{};st.score=e.score||null;
+ const e=db[s][st.date]||{};st.score=(s=='sleep'?e.q:e.score)||null;
  let h=`<input type="date" aria-label="Ir a una fecha" value="${st.date}" onchange="if(this.value){st.date=this.value;render()}">`;
- if(s=='sleep')h+=`<div class="row"><label>Me acosté<input type="time" id="bed" value="${e.bed||'23:00'}" oninput="live()"></label><label>Me desperté<input type="time" id="wake" value="${e.wake||'07:00'}" oninput="live()"></label></div><p id="lv"></p><p class="mu" style="margin:0">La fecha es el día en que despertaste.</p>`;
+ if(s=='sleep'){const nb=!db.sleep[st.date];h+=`<div class="row"><label>Me acosté<input type="time" id="bed" value="${e.bed||(nb?'23:00':'')}" oninput="live()"></label><label>Me desperté<input type="time" id="wake" value="${e.wake||(nb?'07:00':'')}" oninput="live()"></label></div><p id="lv"></p><p class="mu" style="margin:0">La fecha es el día en que despertaste.</p><label>Calidad del descanso (1–10)</label><div class="sc">${[...Array(10)].map((_,i)=>{const k=col('food',i+1);return`<button class="${st.score==i+1?'on':''}" style="background:${k.c};color:${k.f}" onclick="pick(${i+1})">${i+1}</button>`}).join('')}</div><p class="mu" style="margin:0">1 = nada descansado. 10 = muy descansado.</p>`}
  else h+=`<label>Calificación del día</label><div class="sc">${[...Array(10)].map((_,i)=>{const k=col('food',i+1);return`<button class="${st.score==i+1?'on':''}" style="background:${k.c};color:${k.f}" onclick="pick(${i+1})">${i+1}</button>`}).join('')}</div><p class="mu" style="margin:0">1 = solo ultraprocesados y azúcar. 10 = nada de eso.</p>`;
  h+=`<label>${s=='sleep'?'¿Cómo estuvo el sueño?':'Notas sobre lo que comiste'}<textarea id="note" rows="3">${esc(e.note||'')}</textarea></label>`;
  h+=`<div class="acts"><button class="btn pri" onclick="saveE()">Guardar</button>${db[s][st.date]?'<button class="btn" onclick="del()">Borrar</button>':''}</div>`;
  const rec=Object.entries(db[s]).filter(([d,x])=>x.note).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,10);
  return h+'<h3>Notas recientes</h3>'+(rec.length?rec.map(([d,x])=>`<div class="nt" onclick="go('${d}')"><b>${fs(d)}</b>: ${fmt(val(s,d))}<br>${esc(x.note)}</div>`).join(''):'<p class="mu">Aún no hay notas. Guarda un día con nota y aparecerá aquí.</p>')}
 
-function live(){const b=$('#bed'),w=$('#wake');if(!b||!w||!b.value||!w.value)return;
+function live(){const b=$('#bed'),w=$('#wake'),lv=$('#lv');if(!b||!w||!lv)return;
+ if(!b.value||!w.value){lv.textContent='';return}
  const v=((tm(w.value)-tm(b.value)+1440)%1440)/60;
- $('#lv').textContent=hm(v)+' de sueño'+(v<HORARIOS.metaSueno?' · faltan '+hm(HORARIOS.metaSueno-v)+' para la meta':' · meta cumplida')}
+ lv.textContent=hm(v)+' de sueño'+(v<metaS()?' · faltan '+hm(metaS()-v)+' para la meta':' · meta cumplida')}
 function pick(n){st.score=n;document.querySelectorAll('.sc button').forEach((b,i)=>b.classList.toggle('on',i+1==n))}
-function saveE(){const s=st.sec,e={note:$('#note').value.trim()};
- if(s=='sleep'){e.bed=$('#bed').value;e.wake=$('#wake').value;if(!e.bed||!e.wake)return alert('Completa la hora de acostarte y la de despertar.')}
+function saveE(){const s=st.sec;let e={note:$('#note').value.trim()};
+ if(s=='sleep'){const o=db.sleep[st.date]||{},b=$('#bed').value,w=$('#wake').value;
+  if(!!b!==!!w)return alert('Completa la hora de acostarte y la de despertar, o deja las dos vacías.');
+  if(!b&&!st.score&&!e.note)return alert('Completa la hora de acostarte y la de despertar, o elige la calidad del descanso.');
+  e={...o,note:e.note};if(b){e.bed=b;e.wake=w}else{delete e.bed;delete e.wake}
+  if(st.score)e.q=st.score;else delete e.q;
+  if(!(e.bed&&isLate(e.bed,st.date)))delete e.why}
  else{if(!st.score)return alert('Elige una calificación del 1 al 10.');e.score=st.score}
  db[s][st.date]=e;persist();render();window.cloud&&cloud.save(s,st.date,e)}
 function del(){const s=st.sec,d=st.date;delete db[s][d];st.mf=null;persist();render();window.cloud&&cloud.del(s,d)}
@@ -424,7 +399,7 @@ function periodView(){const s=st.sec,v=st.view,L=days(),r=avg(L),d=P(st.date),y=
  const it=v=='year'?MS.map((l,i)=>({l,v:avg(L.filter(x=>+x.slice(5,7)==i+1)).a})):L.map((x,i)=>({l:v=='week'?DL[i]:+x.slice(8),v:val(s,x),d:x}));
  const ws=v=='week'?[weekDays(st.date)]:weeksOf(y,v=='month'?d.getMonth():null);
  let t3;
- if(s=='sleep')t3=['Meta',hm(HORARIOS.metaSueno)];else if(s=='food')t3=['Meta','10 / 10'];
+ if(s=='sleep')t3=['Meta',hm(metaS())];else if(s=='food')t3=['Meta','10 / 10'];
  else if(s=='lost'){const a=L.map(x=>val('lost',x)).filter(x=>x!=null);t3=['Total del período',fmtS('lost',a.reduce((p,q)=>p+q,0))]}
  else{const f=emoFreq(L);t3=['Emoción más frecuente',f.length?esc(f[0][0]):'—']}
  const mt=CFG[s].ideal!=null?' La línea punteada es la meta.':'';
@@ -440,52 +415,100 @@ const wakeFor=d=>HORARIOS.despertar[wdOf(d)]||'07:00';
 function lastBed(d){const k=Object.keys(db.sleep).filter(x=>x<d&&db.sleep[x].bed).sort().pop();
  if(k)return db.sleep[k].bed;
  const b=tplBlocks(add(d,-1)).find(x=>/acostar/i.test(x.t));return b?b.s:'19:00'}
-function cfInit(d){const sl=db.sleep[d]||{},fo=db.food[d]||{},lo=db.lost[d]||{},mo=db.mood[d]||{},di=db.diary[d]||{},pl=db.plan[d]||{};
- return{date:d,dirty:false,bed:sl.bed||lastBed(d),wake:sl.wake||wakeFor(d),food:fo.score||null,min:lo.min==null?'':lo.min,lnote:lo.note||'',mood:mo.score||null,emo:legacyEmo(mo),q:'',diary:di.text||'',imp:pl.imp||null,cum:pl.cum==null?'':pl.cum,org:orgPref()}}
+const minPref=()=>{try{return localStorage.getItem('bit_min')==='1'}catch(e){return false}};
+/* Prellenado de minutos por meta: bloques "hecho" marcados a mano (sin auto) de la categoría de la meta */
+function wkPrefill(d){const p=db.plan[d],o={};weekGoals().forEach(g=>{let s=0;if(p&&g.cat&&Array.isArray(p.blocks))p.blocks.forEach(b=>{if(b.st=='hecho'&&!b.auto&&b.c==g.cat)s+=+b.d||0});o[g.id]=s>0?String(s):''});return o}
+function cfInit(d){const sl=db.sleep[d]||{},fo=db.food[d]||{},lo=db.lost[d]||{},mo=db.mood[d]||{},di=db.diary[d]||{},pl=db.plan[d]||{},me=db.med[d]||{},wr=db.wk[d];
+ let wk;if(wr&&wr.m){wk={};weekGoals().forEach(g=>{wk[g.id]=wr.m[g.id]==null?'':String(wr.m[g.id])})}else wk=wkPrefill(d);
+ return{date:d,dirty:false,bed:sl.bed||lastBed(d),wake:sl.wake||wakeFor(d),sq:sl.q||null,why:sl.why||null,food:fo.score||null,min:lo.min==null?'':lo.min,lnote:lo.note||'',mmin:me.min==null?'':me.min,wk,mood:mo.score||null,emo:legacyEmo(mo),q:'',diary:di.text||'',imp:pl.imp||null,cum:pl.cum==null?'':pl.cum,org:orgPref(),mini:minPref()}}
 function cfSet(k,v){const c=st.cf;if(!c)return;c[k]=v;c.dirty=true;st.flash='';if(k=='bed'||k=='wake')clive()}
 function cfAdd(n){const c=st.cf;c.min=Math.max(0,(+c.min||0)+n);c.dirty=true;$('#clmin').value=c.min}
+function cfAddM(n){const c=st.cf;c.mmin=Math.max(0,(+c.mmin||0)+n);c.dirty=true;$('#cmmin').value=c.mmin}
+function cfWk(id,v){const c=st.cf;c.wk[id]=v;c.dirty=true;st.flash=''}
+function cfWkAdd(id,n){const c=st.cf,v=Math.max(0,(+c.wk[id]||0)+n);c.wk[id]=String(v);c.dirty=true;const el=document.getElementById('cwk_'+id);if(el)el.value=v}
 function cfOrg(on){st.cf.org=on;st.cf.dirty=true;try{localStorage.setItem('bit_org',on?'1':'0')}catch(e){}}
+function cfMini(on){const c=st.cf;c.mini=on;try{localStorage.setItem('bit_min',on?'1':'0')}catch(e){}render()}
 function impTap(v,el){const c=st.cf;c.imp=c.imp==v?null:v;c.dirty=true;st.flash='';el.parentNode.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v==c.imp))}
+function whyTap(v,el){const c=st.cf;c.why=c.why==v?null:v;c.dirty=true;st.flash='';el.parentNode.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v==c.why))}
 function cfPct(n){const c=st.cf;c.cum=String(n);c.dirty=true;st.flash='';$('#ccum').value=c.cum}
 function cNav(n){st.cd=add(st.cd,n);st.cf=null;st.flash='';render()}
+/* Trasnochada: me acuesto más de lateMin min después de la hora ideal, calculada con la hora de levantarme PLANEADA */
+const idealBedFor=d=>((tm(wakeFor(d))-Math.round(metaS()*60))%1440+1440)%1440;
+function isLate(bed,d){if(!bed)return false;const x=((tm(bed)-idealBedFor(d))%1440+1440)%1440;return x>goals().lateMin&&x<=720}
+const lateDay=d=>{const e=db.sleep[d];return!!(e&&e.bed&&isLate(e.bed,d))};
+function whyHTML(c){return`<label>¿Por qué te acostaste tarde? (opcional)</label><div class="seg" style="grid-template-columns:repeat(3,1fr)">${[['evento','Evento'],['sinrazon','Sin razón'],['otro','Otro']].map(([k,l])=>`<button type="button" data-v="${k}" class="${c.why==k?'on':''}" onclick="whyTap('${k}',this)">${l}</button>`).join('')}</div>`}
 function clive(){const c=st.cf,el=$('#clv');if(!c||!el)return;
- if(!c.bed||!c.wake){el.textContent='';return}
- const v=((tm(c.wake)-tm(c.bed)+1440)%1440)/60,m=HORARIOS.metaSueno;
- el.textContent=hm(v)+' de sueño'+(v<m?' · faltan '+hm(m-v)+' para la meta':' · meta cumplida')}
-function idealBed(d){const w=tm(wakeFor(add(d,1)));return((w-HORARIOS.metaSueno*60)%1440+1440)%1440}
+ if(!c.bed||!c.wake)el.textContent='';
+ else{const v=((tm(c.wake)-tm(c.bed)+1440)%1440)/60,m=metaS();
+  el.textContent=hm(v)+' de sueño'+(v<m?' · faltan '+hm(m-v)+' para la meta':' · meta cumplida')}
+ const w=$('#cwhy');if(w){const late=!!c.bed&&isLate(c.bed,c.date);if(!late)c.why=null;w.innerHTML=late?whyHTML(c):''}}
+function idealBed(d){const w=tm(wakeFor(add(d,1)));return((w-Math.round(metaS()*60))%1440+1440)%1440}
+/* Avisos calculados (no se guarda nada) */
+function closeAlerts(d){const a=[],g=goals(),wd=weekDays(d).filter(x=>x<=d);
+ const late=wd.filter(lateDay);
+ if(late.length)a.push('Esta semana: '+late.length+(late.length==1?' trasnochada':' trasnochadas')+' ('+late.filter(x=>db.sleep[x].why=='sinrazon').length+' sin razón)');
+ let x=val('sleep',d)!=null?d:add(d,-1),n=0;
+ while(n<60){const v=val('sleep',x);if(v==null||v>=g.lowSleepH)break;n++;x=add(x,-1)}
+ if(n>=Math.max(1,Math.round(g.lowSleepRun)))a.push(n+' noches seguidas bajo '+g.lowSleepH+' h de sueño');
+ if(d<=TODAY&&!['sleep','food','lost','mood','diary','med'].some(s=>db[s][add(d,-1)]||db[s][add(d,-2)]))a.push('Sin registros de ayer ni de anteayer');
+ return a.length?'<div class="al">'+a.map(esc).join('<br>')+'</div>':''}
 function closeView(){const d=st.cd;if(!st.cf||st.cf.date!=d)st.cf=cfInit(d);
- const c=st.cf,pl=db.plan[d],q=pl?pstats(pl):null,ef=pl&&pl.cum!=null?pl.cum:(q?q.pct:null),tg=relTag(d);
+ const c=st.cf,mini=!!c.mini,pl=db.plan[d],q=pl?pstats(pl):null,ef=pl&&pl.cum!=null?pl.cum:(q?q.pct:null),tg=relTag(d),wg=weekGoals();
  let h='<div class="card">';
  h+=`<div class="nav"><button class="btn" aria-label="Día anterior" onclick="cNav(-1)">‹</button><strong>${dateLbl(d)}${tg?'<small class="mu" style="display:block;font-weight:400">'+tg+'</small>':''}</strong><button class="btn" aria-label="Día siguiente" onclick="cNav(1)">›</button></div>`;
  h+=`<input type="date" aria-label="Ir a una fecha" value="${d}" onchange="if(this.value){st.cd=this.value;st.cf=null;st.flash='';render()}">`;
  if(st.flash)h+=`<p class="ok">${st.flash}</p>`;
+ h+=closeAlerts(d);
+ h+=`<label class="sw" style="margin-top:12px"><input type="checkbox"${mini?' checked':''} onchange="cfMini(this.checked)"><span>Cierre mínimo</span></label>`;
  h+=`<p class="mu" style="margin:10px 0 0">${ef!=null?'Cumplimiento de este día: <b>'+ef+' %</b>'+(pl&&pl.cum!=null?' (el que indicaste). ':' ('+q.done+' de '+q.total+' bloques). '):'Aún no hay bloques marcados en el calendario de este día. '}<a href="#" onclick="event.preventDefault();st.pd='${d}';tab('plan')">Abrir calendario de este día</a></p>`;
  h+=`<div class="row"><label>Hora a la que me acosté ayer<input type="time" value="${c.bed||''}" oninput="cfSet('bed',this.value)"></label><label>Hora a la que me levanté hoy<input type="time" value="${c.wake||''}" oninput="cfSet('wake',this.value)"></label></div><p id="clv"></p>`;
- h+=`<label>Alimentación (1–10)</label>${scoreBtns('cf','food','food',c.food)}<p class="mu" style="margin:0">Según si evité azúcares y ultraprocesados y qué tan bien sentí que comí hoy.</p>`;
- h+=`<label>Tiempo perdido hoy (minutos)<input type="number" id="clmin" inputmode="numeric" min="0" step="5" placeholder="0" value="${c.min}" oninput="cfSet('min',this.value)"></label>`;
- h+=`<div class="chips"><button type="button" class="chp" onclick="cfAdd(15)">+15</button><button type="button" class="chp" onclick="cfAdd(30)">+30</button><button type="button" class="chp" onclick="cfAdd(60)">+60</button><button type="button" class="chp" onclick="cfAdd(-15)">−15</button></div>`;
- h+=`<label>¿En qué fue? (opcional)<textarea rows="2" oninput="cfSet('lnote',this.value)">${esc(c.lnote)}</textarea></label>`;
- h+=`<h3 style="margin-bottom:0">Lo más importante de hoy</h3><label style="margin-top:6px">¿Hiciste lo más importante que querías hacer hoy?</label><div class="seg" style="grid-template-columns:1fr">${IMP.map(([k,l])=>`<button type="button" data-v="${k}" class="${c.imp==k?'on':''}" onclick="impTap('${k}',this)">${l}</button>`).join('')}</div>`;
+ h+=`<label>¿Qué tanto sentí que descansé la noche que terminó hoy? (1–10)</label>${scoreBtns('cf','sq','food',c.sq)}<p class="mu" style="margin:0">1 = nada descansado. 10 = muy descansado.</p><div id="cwhy"></div>`;
+ if(!mini){
+  h+=`<label>Alimentación (1–10)</label>${scoreBtns('cf','food','food',c.food)}<p class="mu" style="margin:0">Según si evité azúcares y ultraprocesados y qué tan bien sentí que comí hoy.</p>`;
+  h+=`<label>Tiempo perdido hoy (minutos)<input type="number" id="clmin" inputmode="numeric" min="0" step="5" placeholder="0" value="${c.min}" oninput="cfSet('min',this.value)"></label>`;
+  h+=`<div class="chips"><button type="button" class="chp" onclick="cfAdd(15)">+15</button><button type="button" class="chp" onclick="cfAdd(30)">+30</button><button type="button" class="chp" onclick="cfAdd(60)">+60</button><button type="button" class="chp" onclick="cfAdd(-15)">−15</button></div>`;
+  h+=`<label>¿En qué fue? (opcional)<textarea rows="2" oninput="cfSet('lnote',this.value)">${esc(c.lnote)}</textarea></label>`;
+  h+=`<label>Meditación (min)<input type="number" id="cmmin" inputmode="numeric" min="0" step="5" placeholder="0" value="${qa(c.mmin)}" oninput="cfSet('mmin',this.value)"></label>`;
+  h+=`<div class="chips"><button type="button" class="chp" onclick="cfAddM(5)">+5</button><button type="button" class="chp" onclick="cfAddM(10)">+10</button><button type="button" class="chp" onclick="cfAddM(-5)">−5</button></div>`;
+  h+=`<h3 style="margin-bottom:0">Minutos de hoy en mis metas</h3>`+(wg.length?wg.map(g=>`<label>${esc(g.n)} (min)<input type="number" id="cwk_${g.id}" inputmode="numeric" min="0" step="5" placeholder="0" value="${qa(c.wk[g.id]==null?'':c.wk[g.id])}" oninput="cfWk('${g.id}',this.value)"></label><div class="chips">${[30,60,-30].map(n=>`<button type="button" class="chp" onclick="cfWkAdd('${g.id}',${n})">${n>0?'+':'−'}${Math.abs(n)}</button>`).join('')}</div>`).join(''):'<p class="mu">Aún no tienes metas semanales. Puedes crearlas en Calendario › Esta semana › Editar metas.</p>');
+  h+=`<h3 style="margin-bottom:0">Lo más importante de hoy</h3><label style="margin-top:6px">¿Hiciste lo más importante que querías hacer hoy?</label><div class="seg" style="grid-template-columns:1fr">${IMP.map(([k,l])=>`<button type="button" data-v="${k}" class="${c.imp==k?'on':''}" onclick="impTap('${k}',this)">${l}</button>`).join('')}</div>`}
  h+=`<label>¿Qué tanto cumplí hoy? (%)<input type="number" id="ccum" inputmode="numeric" min="0" max="100" step="1" placeholder="${q&&q.pct!=null?q.pct+' (según el calendario)':'0 a 100'}" value="${qa(c.cum)}" oninput="cfSet('cum',this.value)"></label>`;
  h+=`<div class="chips">${[0,25,50,75,100].map(n=>`<button type="button" class="chp" onclick="cfPct(${n})">${n} %</button>`).join('')}</div>`;
  h+=`<p class="mu" style="margin:6px 0 0">Al guardar, ese porcentaje de los bloques del calendario de este día (sin contar imprevistos) se marca como “Hecho”, y es el valor que se usa en Cruces. Si lo dejas vacío, cuenta solo lo que marques en el calendario.</p>`;
- h+=`<h3 style="margin-bottom:0">Cómo me siento antes de dormir</h3>`+moodBox('cf');
- h+=`<label>Diario<textarea rows="6" placeholder="Escribe lo que quieras recordar de hoy…" oninput="cfSet('diary',this.value)">${esc(c.diary)}</textarea></label>`;
+ h+=`<h3 style="margin-bottom:0">Cómo me siento antes de dormir</h3>`+(mini?`<label>Ánimo (1–10)</label>${scoreBtns('cf','mood','mood',c.mood)}<p class="mu" style="margin:0">1 = muy mal. 10 = muy bien.</p>`:moodBox('cf'));
+ if(!mini)h+=`<label>Diario<textarea rows="6" placeholder="Escribe lo que quieras recordar de hoy…" oninput="cfSet('diary',this.value)">${esc(c.diary)}</textarea></label>`;
  h+=`<label class="sw"><input type="checkbox"${c.org?' checked':''} onchange="cfOrg(this.checked)"><span>Organizar el día siguiente</span></label>`;
- h+=`<p class="mu" style="margin:6px 0 0">Mañana te levantas a las ${ft(tm(wakeFor(add(d,1))))}: para dormir ${dur(HORARIOS.metaSueno*60)}, acuéstate a las ${ft(idealBed(d))}.</p>`;
+ h+=`<p class="mu" style="margin:6px 0 0">Mañana te levantas a las ${ft(tm(wakeFor(add(d,1))))}: para dormir ${dur(metaS()*60)}, acuéstate a las ${ft(idealBed(d))}.</p>`;
  h+=`<div class="acts"><button class="btn pri lg" onclick="saveClose()">Guardar</button></div></div>`;
- return h}
-function saveClose(){const c=st.cf,d=c.date;
+ return(wdOf(d)==0?weekCard(d,false):'')+h}
+function saveClose(){const c=st.cf,d=c.date,mini=!!c.mini;
  if(!!c.bed!==!!c.wake)return alert('Completa la hora de acostarte y la de levantarte, o deja las dos vacías.');
  const cumTxt=String(c.cum==null?'':c.cum).trim();
  if(cumTxt!==''&&(isNaN(+cumTxt)||+cumTxt<0||+cumTxt>100))return alert('El porcentaje de cumplimiento debe estar entre 0 y 100.');
+ if(!mini){
+  if(c.min!==''&&(isNaN(+c.min)||+c.min<0))return alert('Los minutos perdidos deben ser 0 o más.');
+  if(c.mmin!==''&&(isNaN(+c.mmin)||+c.mmin<0))return alert('Los minutos de meditación deben ser 0 o más.');
+  for(const g of weekGoals()){const v=c.wk[g.id];if(v!==''&&v!=null&&(isNaN(+v)||+v<0))return alert('Los minutos de “'+g.n+'” deben ser 0 o más.')}}
  const set=(s,e)=>{db[s][d]=e;window.cloud&&cloud.save(s,d,e)},rm=s=>{if(db[s][d]){delete db[s][d];window.cloud&&cloud.del(s,d)}};
- if(c.bed&&c.wake){const o=db.sleep[d]||{};set('sleep',{...o,bed:c.bed,wake:c.wake,note:o.note||''})}
- if(c.food){const o=db.food[d]||{};set('food',{...o,score:c.food,note:o.note||''})}
- if(c.min!==''&&!isNaN(+c.min)&&+c.min>=0)set('lost',{min:Math.round(+c.min),note:(c.lnote||'').trim()});else if(c.min==='')rm('lost');
- if(c.mood||c.emo.length){learnEmos(c.emo);set('mood',{score:c.mood||null,emo:[...c.emo],other:''})}else rm('mood');
- const tx=(c.diary||'').trim();
- if(tx)set('diary',{text:tx});else rm('diary');
+ /* Sueño: se conservan los campos existentes; q (calidad) y why (motivo de la trasnochada) son opcionales */
+ const so=db.sleep[d],hasBW=!!(c.bed&&c.wake);
+ if(hasBW||c.sq||(so&&(so.q!=null||so.why))){const o=so||{},e={...o};
+  if(hasBW){e.bed=c.bed;e.wake=c.wake}
+  e.note=o.note||'';
+  if(c.sq)e.q=c.sq;else delete e.q;
+  if(e.bed&&isLate(e.bed,d)&&c.why)e.why=c.why;else delete e.why;
+  if(!e.bed&&!e.wake&&e.q==null&&!e.note)rm('sleep');else set('sleep',e)}
+ if(!mini){
+  if(c.food){const o=db.food[d]||{};set('food',{...o,score:c.food,note:o.note||''})}
+  /* Vacío = 0, solo al guardar el cierre completo */
+  set('lost',{min:c.min===''?0:Math.round(+c.min),note:(c.lnote||'').trim()});
+  set('med',{min:c.mmin===''?0:Math.round(+c.mmin)});
+  const wo=db.wk[d],m={};weekGoals().forEach(g=>{const v=c.wk[g.id];m[g.id]=v===''||v==null?0:Math.round(+v)});
+  set('wk',{m:{...((wo&&wo.m)||{}),...m}});
+  if(c.mood||c.emo.length){learnEmos(c.emo);set('mood',{score:c.mood||null,emo:[...c.emo],other:''})}else rm('mood');
+  const tx=(c.diary||'').trim();
+  if(tx)set('diary',{text:tx});else rm('diary')}
+ else if(c.mood){const mo=db.mood[d]||{};if(mo.score!==c.mood)set('mood',{...mo,score:c.mood,emo:Array.isArray(mo.emo)?mo.emo:[],other:mo.other||''})}
  /* Lo más importante (imp) y % cumplido (cum) se guardan dentro del registro plan_AAAA-MM-DD */
  const pc=cumTxt===''?null:Math.round(+cumTxt),po=db.plan[d];
  if(c.imp||pc!=null||(po&&(po.imp||po.cum!=null))){const p=ensurePlan(d);
@@ -506,15 +529,15 @@ const sortB=bl=>[...bl].sort((a,b)=>tm(a.s)-tm(b.s)||String(a.id).localeCompare(
 /* Marca como "Hecho" el pc % de los bloques (sin imprevistos), respetando lo ya marcado */
 function applyPct(p,pc){const L=sortB((p.blocks||[]).filter(b=>!isBuf(b)));if(!L.length)return;
  const n=Math.round(L.length*pc/100);let done=L.filter(b=>b.st=='hecho').length;
- if(done<n){const c=L.filter(b=>b.st!='hecho').sort((a,b)=>(a.st=='nohecho'?1:0)-(b.st=='nohecho'?1:0));for(const b of c){if(done>=n)break;b.st='hecho';done++}}
- else if(done>n){for(const b of [...L].reverse()){if(done<=n)break;if(b.st=='hecho'){b.st='pendiente';done--}}}}
+ if(done<n){const c=L.filter(b=>b.st!='hecho').sort((a,b)=>(a.st=='nohecho'?1:0)-(b.st=='nohecho'?1:0));for(const b of c){if(done>=n)break;b.st='hecho';b.auto=1;done++}}
+ else if(done>n){for(const b of [...L].reverse()){if(done<=n)break;if(b.st=='hecho'){b.st='pendiente';delete b.auto;done--}}}}
 function pstats(p){const l=(p.blocks||[]).filter(b=>!isBuf(b)),done=l.filter(b=>b.st=='hecho').length;return{done,total:l.length,pct:l.length?Math.round(100*done/l.length):null}}
 function tplBlocks(d){const wd=wdOf(d),o=db.cfg.tpl&&db.cfg.tpl.days&&db.cfg.tpl.days[wd];
  const src=o||HORARIOS.plantilla[wd].map(([t,s,m,c])=>({t,s,d:m,c}));
  return src.map((b,i)=>({id:'t'+i,t:b.t,s:b.s,d:b.d,c:b.c,n:b.n||'',st:'pendiente'}))}
 function getPlan(d){const p=db.plan[d];if(p){if(!p.top)p.top=['','',''];return p}return{blocks:tplBlocks(d),top:['','',''],virtual:1}}
 function ensurePlan(d){if(!db.plan[d])db.plan[d]={blocks:tplBlocks(d),top:['','','']};const p=db.plan[d];if(!p.top)p.top=['','',''];return p}
-function savePlan(d){const p=db.plan[d],q=pstats(p);p.pct=q.pct;p.done=q.done;p.total=q.total;persist();window.cloud&&cloud.save('plan',d,p)}
+function savePlan(d){st.undo=null;const p=db.plan[d],q=pstats(p);p.pct=q.pct;p.done=q.done;p.total=q.total;persist();window.cloud&&cloud.save('plan',d,p)}
 const mkId=()=>'b'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
 function gaps(bl){const o=[];let e=tm(HORARIOS.inicioDia);const fin=tm(HORARIOS.finDia);
  sortB(bl).forEach(b=>{const s=tm(b.s);if(s-e>=5&&s<=fin)o.push({s:e,len:s-e});e=Math.max(e,s+b.d)});return o}
@@ -523,13 +546,42 @@ function pGo(d){st.pd=d;st.open=null;render()}
 function setTop(i,v){const p=ensurePlan(st.pd);p.top[i]=v.trim();savePlan(st.pd)}
 function setB(id,k,v){const p=ensurePlan(st.pd),b=p.blocks.find(x=>x.id==id);if(!b)return;
  if(k=='d'){const n=Math.round(+v);if(!(n>=1)){render();return}v=Math.min(1440,n)}
- if(k=='st')delete p.cum;b[k]=v;savePlan(st.pd);render()}
+ if(k=='st'){delete p.cum;delete b.auto}b[k]=v;savePlan(st.pd);render()}
 function durB(id,n){const p=getPlan(st.pd),b=p.blocks.find(x=>x.id==id);if(b)setB(id,'d',Math.max(1,b.d+n))}
-function mark(id){const p=ensurePlan(st.pd),b=p.blocks.find(x=>x.id==id);if(!b)return;b.st=b.st=='hecho'?'pendiente':'hecho';delete p.cum;savePlan(st.pd);render()}
-function later(id){const p=ensurePlan(st.pd),b=p.blocks.find(x=>x.id==id);if(!b)return;
- const s0=tm(b.s),mx=Math.max(s0,tm(HORARIOS.finDia)-b.d),n=Math.min(s0+HORARIOS.moverMin,mx);
- if(n==s0)return alert('Este bloque ya no se puede mover más tarde dentro del día.');
- b.s=hh(n);b.st='movido';delete p.cum;savePlan(st.pd);render()}
+function mark(id){const p=ensurePlan(st.pd),b=p.blocks.find(x=>x.id==id);if(!b)return;b.st=b.st=='hecho'?'pendiente':'hecho';delete b.auto;delete p.cum;savePlan(st.pd);render()}
+/* ---------- Mover bloques desde aquí ---------- */
+function planMove(p,id,delta,scope){
+ const bl=sortB(p.blocks),i0=bl.findIndex(x=>x.id==id);if(i0<0)return{err:'No encontré el bloque.'};
+ const seq=(scope=='one'?[bl[i0]]:bl.slice(i0)).filter(b=>b.st!='hecho');
+ if(!seq.length)return{err:'No hay bloques por mover: los bloques hechos no se mueven.'};
+ const ini=tm(HORARIOS.inicioDia),fin=tm(HORARIOS.finDia),ch=[];let shift=delta;
+ seq.forEach((b,i)=>{const s0=tm(b.s);
+  if(shift>0&&i>0&&isBuf(b)){const nd=Math.min(b.d,Math.max(15,b.d-shift));ch.push({b,s:s0+shift,d:nd});shift-=b.d-nd} // imprevistos = colchón
+  else ch.push({b,s:s0+shift,d:b.d})});
+ const chg=ch.filter(x=>x.s!=tm(x.b.s)||x.d!=x.b.d);
+ if(!chg.length)return{err:'No hay nada que mover.'};
+ if(chg.some(x=>x.s<ini))return{err:'No se puede mover antes de las '+ft(ini)+' (inicio del día).'};
+ if(chg.some(x=>x.s+x.d>1439))return{err:'El movimiento llevaría un bloque más allá de la medianoche.'};
+ return{chg,over:chg.filter(x=>x.s+x.d>fin)}}
+function applyMove(id,delta,scope){const p0=getPlan(st.pd),r=planMove(p0,id,delta,scope);if(r.err)return alert(r.err);
+ if(r.over.length&&!confirm('Con este movimiento estos bloques terminarían después de las '+ft(tm(HORARIOS.finDia))+':\n'+r.over.map(x=>'• '+x.b.t+' ('+ft(x.s)+' – '+ft(x.s+x.d)+')').join('\n')+'\n\nNo se ha movido nada. ¿Aplicarlo igual?'))return;
+ const snap={date:st.pd,blocks:JSON.parse(JSON.stringify(p0.blocks)),cum:p0.cum};
+ const p=ensurePlan(st.pd);
+ r.chg.forEach(x=>{const b=p.blocks.find(y=>y.id==x.b.id);if(!b)return;b.s=hh(x.s);b.d=x.d;if(b.st=='pendiente')b.st='movido'});
+ delete p.cum;savePlan(st.pd);st.undo=snap;render()} // el "deshacer" vive solo en memoria
+function moveFrom(id,v){const n=Math.round(+v);if(!n||!isFinite(n)||Math.abs(n)>720)return alert('Escribe cuántos minutos mover (positivo = más tarde, negativo = más temprano).');applyMove(id,n,st.mvScope||'all')}
+function mvScope(s){st.mvScope=s;render()}
+function openMove(id){st.open=id;render();const el=document.getElementById('b_'+id);if(el&&el.scrollIntoView)el.scrollIntoView({block:'center'})}
+function undoMove(){const u=st.undo;if(!u||u.date!=st.pd)return;const p=ensurePlan(u.date);p.blocks=u.blocks;if(u.cum!=null)p.cum=u.cum;else delete p.cum;st.open=null;savePlan(u.date);st.undo=null;render()}
+function startNow(){const f=sortB(getPlan(st.pd).blocks).find(b=>b.st=='pendiente'||b.st=='movido');
+ if(!f)return alert('No hay bloques pendientes.');
+ const n=new Date(),now=n.getHours()*60+n.getMinutes(),s0=tm(f.s);
+ if(now-s0<10)return alert('El primer bloque pendiente (“'+f.t+'”, '+ft(s0)+') no va atrasado 10 minutos o más.');
+ applyMove(f.id,Math.round(now/5)*5-s0,'all')}
+function moveHTML(id,b){const sc=st.mvScope||'all';
+ return`<label>Mover desde aquí</label><div class="chips">${[-30,-15,15,30,60].map(n=>`<button type="button" class="chp" onclick="moveFrom('${id}',${n})">${n>0?'+':'−'}${Math.abs(n)}</button>`).join('')}</div><div class="stp" style="margin-top:8px"><input type="number" inputmode="numeric" step="5" placeholder="min (+ más tarde, − antes)" id="mvn_${id}"><button type="button" class="btn" onclick="moveFrom('${id}',document.getElementById('mvn_${id}').value)">Mover</button></div><div class="seg" style="grid-template-columns:1fr 1fr"><button type="button" class="${sc=='all'?'on':''}" onclick="mvScope('all')">Este y los siguientes</button><button type="button" class="${sc=='one'?'on':''}" onclick="mvScope('one')">Solo este bloque</button></div><p class="mu" style="margin:6px 0 0">Los bloques hechos no se mueven. Los imprevistos absorben el retraso (mínimo 15 min).</p>`}
+function moveBar(d){const u=st.undo&&st.undo.date==d;if(d!=TODAY&&!u)return'';
+ return`<div class="chips" style="margin:10px 0 0">${d==TODAY?'<button type="button" class="btn" onclick="startNow()">Empezar desde ahora</button>':''}${u?'<button type="button" class="btn" onclick="undoMove()">↶ Deshacer último movimiento</button>':''}</div>`}
 function openB(id){st.open=st.open==id?null:id;render()}
 function addB(s,len){const p=ensurePlan(st.pd),g=gaps(p.blocks)[0];
  const b={id:mkId(),t:'Nuevo bloque',s:s||hh(g?g.s:tm(HORARIOS.inicioDia)),d:len?Math.min(len,60):30,c:'otro',n:'',st:'pendiente'};
@@ -546,25 +598,27 @@ function restoreTpl(){const wd=wdOf(st.pd);if(!confirm('Se restaurará la planti
  if(Object.keys(cfg.days).length){persist();window.cloud&&cloud.save('cfg','tpl',cfg)}else{delete db.cfg.tpl;persist();window.cloud&&cloud.del('cfg','tpl')}
  render()}
 function blockHTML(b,ov){const o=st.open==b.id,s0=tm(b.s),ct=catOf(b.c),stt=ST[b.st]?b.st:'pendiente';
- let h=`<div class="blk s-${stt}" id="b_${b.id}" style="--cc:${ct.col}"><div class="bm"><div class="bt" onclick="openB('${b.id}')"><div class="bh">${ft(s0)} – ${ft(s0+b.d)}${ov?' · <b class="wr">⚠ se cruza</b>':''}</div><div class="bn">${esc(b.t)}${stt!='pendiente'?`<span class="bdg">${ST[stt]}</span>`:''}</div><div class="bh">${dur(b.d)} · ${esc(ct.n)}${b.n?' · '+esc(b.n.length>40?b.n.slice(0,40)+'…':b.n):''}</div></div><div class="ba"><button class="ib${stt=='hecho'?' ok':''}" onclick="mark('${b.id}')" aria-label="Marcar como hecho"><b>✓</b><small>Hecho</small></button><button class="ib" onclick="later('${b.id}')" aria-label="Mover a más tarde"><b>⏭</b><small>Más tarde</small></button></div></div>`;
+ let h=`<div class="blk s-${stt}" id="b_${b.id}" style="--cc:${ct.col}"><div class="bm"><div class="bt" onclick="openB('${b.id}')"><div class="bh">${ft(s0)} – ${ft(s0+b.d)}${ov?' · <b class="wr">⚠ se cruza</b>':''}</div><div class="bn">${esc(b.t)}${stt!='pendiente'?`<span class="bdg">${ST[stt]}</span>`:''}</div><div class="bh">${dur(b.d)} · ${esc(ct.n)}${b.n?' · '+esc(b.n.length>40?b.n.slice(0,40)+'…':b.n):''}</div></div><div class="ba"><button class="ib${stt=='hecho'?' ok':''}" onclick="mark('${b.id}')" aria-label="Marcar como hecho"><b>✓</b><small>Hecho</small></button><button class="ib" onclick="openMove('${b.id}')" aria-label="Mover desde aquí"><b>⏭</b><small>Mover</small></button></div></div>`;
  if(o){const id=b.id;
   h+=`<div class="pn"><label>Título<input type="text" value="${qa(b.t)}" onchange="setB('${id}','t',this.value.trim()||'Bloque')"></label>`
   +`<div class="row"><label>Inicio<input type="time" value="${b.s}" onchange="if(this.value)setB('${id}','s',this.value)"></label><label style="min-width:210px">Duración (min)<div class="stp"><button type="button" class="btn" onclick="durB('${id}',-15)" aria-label="Menos 15 minutos">−15</button><input type="number" inputmode="numeric" min="1" step="1" value="${b.d}" onchange="setB('${id}','d',this.value)"><button type="button" class="btn" onclick="durB('${id}',15)" aria-label="Más 15 minutos">+15</button></div></label></div>`
   +`<label>Categoría</label><div class="chips">${catList().map(c=>`<button type="button" class="chp${ct.id==c.id?' on':''}" style="border-left:6px solid ${c.col}" onclick="setB('${id}','c','${c.id}')">${esc(c.n)}</button>`).join('')}<button type="button" class="chp" onclick="openCats()">＋ Nueva categoría</button></div>`
   +`<label>Nota (opcional)<textarea rows="2" onchange="setB('${id}','n',this.value.trim())">${esc(b.n||'')}</textarea></label>`
+  +moveHTML(id,b)
   +`<label>Estado</label><div class="seg">${Object.keys(ST).map(k2=>`<button type="button" class="${stt==k2?'on':''}" onclick="setB('${id}','st','${k2}')">${ST[k2]}</button>`).join('')}</div>`
   +`<div class="acts"><button class="btn" onclick="delB('${id}')">Eliminar bloque</button><button class="btn" onclick="openB('${id}')">Cerrar</button></div></div>`}
  return h+'</div>'}
 function planView(){const d=st.pd,p=getPlan(d),bl=sortB(p.blocks),q=pstats(p),ef=p.cum!=null?p.cum:q.pct,tg=relTag(d),wd=wdOf(d),edited=!!(db.cfg.tpl&&db.cfg.tpl.days&&db.cfg.tpl.days[wd]);
  const ini=tm(HORARIOS.inicioDia),fin=tm(HORARIOS.finDia),tot=fin-ini,ib=idealBed(d),bb=bl.filter(b=>/acostar/i.test(b.t)).pop(),wn=tm(wakeFor(add(d,1)));
- let h=`<div class="card"><div class="nav"><button class="btn" aria-label="Día anterior" onclick="pNav(-1)">‹</button><strong>${P(d).toLocaleDateString('es',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}${tg?'<small class="mu" style="display:block;font-weight:400">'+tg+'</small>':''}</strong><button class="btn" aria-label="Día siguiente" onclick="pNav(1)">›</button></div>`;
+ let h=weekCard(TODAY,true)+`<div class="card"><div class="nav"><button class="btn" aria-label="Día anterior" onclick="pNav(-1)">‹</button><strong>${P(d).toLocaleDateString('es',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}${tg?'<small class="mu" style="display:block;font-weight:400">'+tg+'</small>':''}</strong><button class="btn" aria-label="Día siguiente" onclick="pNav(1)">›</button></div>`;
  h+=`<div class="tabs"><button class="${d==TODAY?'on':''}" onclick="pGo('${TODAY}')">Hoy</button><button class="${d==add(TODAY,1)?'on':''}" onclick="pGo('${add(TODAY,1)}')">Mañana</button></div>`;
  h+=`<input type="date" aria-label="Ir a una fecha" style="margin-top:8px" value="${d}" onchange="if(this.value)pGo(this.value)">`;
  h+=`<h3>3 prioridades de ${d==add(TODAY,1)?'mañana':d==TODAY?'hoy':'este día'}</h3>`+[0,1,2].map(i=>`<input type="text" class="pr" placeholder="${i+1}. Lo más importante" value="${qa(p.top[i]||'')}" onchange="setTop(${i},this.value)">`).join('');
- h+=`<div class="stats" style="margin-top:14px"><div class="stat"><span>Cumplimiento</span><b>${ef==null?'—':ef+' %'}</b><span>${q.done} de ${q.total} bloques${p.cum!=null?' · indicado en el cierre':''}</span></div><div class="stat"><span>Hora ideal para acostarte</span><b>${ft(ib)}</b><span>${dur(HORARIOS.metaSueno*60)} de sueño</span></div></div>`;
- h+=`<p class="mu" style="margin-top:0">Para levantarte el ${dayName(add(d,1))} a las ${ft(wn)} y dormir ${dur(HORARIOS.metaSueno*60)}, acuéstate a las ${ft(ib)}.${bb?' Con tu plan (acostarte a las '+ft(tm(bb.s))+') dormirías '+hm(((wn-tm(bb.s))%1440+1440)%1440/60)+'.':''}</p>`;
+ h+=`<div class="stats" style="margin-top:14px"><div class="stat"><span>Cumplimiento</span><b>${ef==null?'—':ef+' %'}</b><span>${q.done} de ${q.total} bloques${p.cum!=null?' · indicado en el cierre':''}</span></div><div class="stat"><span>Hora ideal para acostarte</span><b>${ft(ib)}</b><span>${dur(metaS()*60)} de sueño</span></div></div>`;
+ h+=`<p class="mu" style="margin-top:0">Para levantarte el ${dayName(add(d,1))} a las ${ft(wn)} y dormir ${dur(metaS()*60)}, acuéstate a las ${ft(ib)}.${bb?' Con tu plan (acostarte a las '+ft(tm(bb.s))+') dormirías '+hm(((wn-tm(bb.s))%1440+1440)%1440/60)+'.':''}</p>`;
  h+=`<div class="dbar">${bl.map(b=>{const s=Math.max(ini,tm(b.s)),e=Math.min(fin,tm(b.s)+b.d);return e>s?`<i style="left:${(s-ini)/tot*100}%;width:${(e-s)/tot*100}%;--cc:${catOf(b.c).col}"></i>`:''}).join('')}</div><div class="dax"><span>${ft(ini)}</span><span>${ft(fin)}</span></div>`;
  if(p.virtual)h+=`<p class="mu">Plan precargado con la plantilla ${edited?'(editada) ':''}del ${dayName(d)}. Se guarda cuando tocas un bloque o escribes una prioridad.</p>`;
+ h+=moveBar(d);
  let end=0;
  sortB(bl).forEach((b,i)=>{const s0=tm(b.s);
   if(i>0&&s0-end>=5&&s0<=fin)h+=`<div class="gap" onclick="addB('${hh(end)}',${s0-end})">Libre ${dur(s0-end)} · tocar para agregar</div>`;
@@ -623,16 +677,8 @@ function editDay(d){st.sec='close';st.cd=d;st.cf=null;st.flash='';render();windo
 /* =====================================================================
    CRUCES — líneas normalizadas a % de su meta (hasta 130 %), el tooltip muestra el valor real
    ===================================================================== */
-const XS=[
- {k:'sleep',n:'Sueño',c:'#5b6cff'},
- {k:'food',n:'Alimentación',c:'#2f9e44'},
- {k:'lost',n:'Tiempo perdido (invertido)',c:'#e8590c'},
- {k:'mood',n:'Ánimo',c:'#d6336c'},
- {k:'plan',n:'Cumplimiento',c:'#0c8599'}
-];
 const XL=36,XR=10,XMAX=130,LOST_MAX=120,XSP=14; // XMAX: tope de la gráfica (%); LOST_MAX: minutos perdidos que equivalen a 0 %; XSP: separación mínima entre puntos (px)
 let XW=600; // ancho del gráfico: crece (con desplazamiento horizontal) cuando hay muchos puntos
-function xFirst(){let f=null;XS.forEach(S=>Object.keys(db[S.k]||{}).forEach(d=>{if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&d<=TODAY&&(!f||d<f)&&val(S.k,d)!=null)f=d}));return f}
 function xPeriods(v){const o=[],n=new Date(),dl=d=>P(d).toLocaleDateString('es',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
  if(v=='all'){const f=xFirst();if(f)for(let d=f;d<=TODAY;d=add(d,1))o.push({l:fs(d),t:dl(d),days:[d]})}
  else if(v=='wk'){weekDays(st.xw).forEach((d,i)=>o.push({l:DL[i]+' '+(+d.slice(8)),t:dl(d),days:[d]}))}
@@ -645,20 +691,20 @@ function xAll(){st.xh={};st.xi={};render()}
 function xView(v){st.xv=v;st.xsl=null;render()}
 function xwNav(n){st.xw=add(st.xw,7*n);st.xsl=null;render()}
 function xwSet(d){if(d){st.xw=d;st.xsl=null;render()}}
-function crossView(){const v=st.xv,per=xPeriods(v),vis=XS.filter(S=>!st.xh[S.k]);
+function crossView(){const v=st.xv,per=xPeriods(v),act=xActive(),vis=act.filter(S=>!st.xh[S.k]);
  per.forEach(p=>{const ds=p.days.filter(d=>d<=TODAY);p.v={};
-  XS.forEach(S=>{const a=ds.map(d=>val(S.k,d)).filter(x=>x!=null);p.v[S.k]=a.length?a.reduce((x,y)=>x+y,0)/a.length:null});
+  act.forEach(S=>{const a=ds.map(d=>xVal(S.k,d)).filter(x=>x!=null);p.v[S.k]=a.length?a.reduce((x,y)=>x+y,0)/a.length:null});
   p.im={si:0,no:0,na:0};ds.forEach(d=>{const e=db.plan[d];if(e&&e.imp&&p.im[e.imp]!=null)p.im[e.imp]++})});
  st.xd=per;
- const NZ={sleep:v=>v/HORARIOS.metaSueno*100,food:v=>v*10,mood:v=>v*10,plan:v=>v,lost:v=>(1-Math.min(Math.max(v,0),LOST_MAX)/LOST_MAX)*100}; // % de cada serie: sueño 100 % = meta; tiempo perdido invertido (0 min = 100 %)
- const U={sleep:v=>hm(v),food:v=>r1(v)+' / 10',lost:v=>fmtS('lost',v),mood:v=>r1(v)+' / 10',plan:v=>Math.round(v)+' %'};
+ const NZ={sleep:v=>v/metaS()*100,sleepq:v=>v*10,sleepa:v=>v,med:v=>v/goals().medMin*100,food:v=>v*10,mood:v=>v*10,plan:v=>v,lost:v=>(1-Math.min(Math.max(v,0),LOST_MAX)/LOST_MAX)*100}; // % de cada serie: sueño 100 % = meta; tiempo perdido invertido (0 min = 100 %)
+ const U={sleep:v=>hm(v),sleepq:v=>r1(v)+' / 10',sleepa:v=>Math.round(v)+' %',med:v=>Math.round(v)+' min',food:v=>r1(v)+' / 10',lost:v=>fmtS('lost',v),mood:v=>r1(v)+' / 10',plan:v=>Math.round(v)+' %'};
  st.xu=U;
  const n=per.length,wide=n>1&&(n-1)*XSP>700;XW=wide?XL+XR+(n-1)*XSP:600;
  const H=290,T=14,B=46,X=i=>XL+(n==1?(XW-XL-XR)/2:(XW-XL-XR)*i/(n-1)),Y=p=>T+(H-T-B)*(1-p/XMAX);
  let h='<div class="tabs" style="margin-top:14px">'+[['all','Todos los días'],['wk','Una semana'],['weeks','Todas las semanas'],['month','Por mes']].map(([k,l])=>`<button class="${k==v?'on':''}" onclick="xView('${k}')">${l}</button>`).join('')+'</div>';
  h+='<div class="card">';
  if(v=='wk'){const w=weekDays(st.xw);h+=`<div class="nav"><button class="btn" aria-label="Semana anterior" onclick="xwNav(-1)">‹</button><strong>${fs(w[0])} – ${fs(w[6])} ${P(w[6]).getFullYear()}</strong><button class="btn" aria-label="Semana siguiente" onclick="xwNav(1)">›</button></div><input type="date" aria-label="Ir a la semana de una fecha" value="${st.xw}" onchange="xwSet(this.value)" style="margin-bottom:12px">`}
- h+='<div class="chips" style="margin-top:0">'+XS.map(S=>{const off=st.xh[S.k],hi=st.xi[S.k];return`<span class="xc2${off?' off':''}${hi?' hi':''}" style="--cc:${S.c}"><button type="button" class="xa" aria-pressed="${!off}" onclick="xTog('${S.k}')"><i></i>${S.n}</button><button type="button" class="xb" aria-label="Destacar ${S.n}" aria-pressed="${!!hi}" onclick="xHi('${S.k}')">★</button></span>`}).join('')+'<button type="button" class="chp" onclick="xAll()">Mostrar todas</button></div>';
+ h+=sleepModeBar();h+='<div class="chips" style="margin-top:0">'+act.map(S=>{const off=st.xh[S.k],hi=st.xi[S.k];return`<span class="xc2${off?' off':''}${hi?' hi':''}" style="--cc:${S.c}"><button type="button" class="xa" aria-pressed="${!off}" onclick="xTog('${S.k}')"><i></i>${S.n}</button><button type="button" class="xb" aria-label="Destacar ${S.n}" aria-pressed="${!!hi}" onclick="xHi('${S.k}')">★</button></span>`}).join('')+'<button type="button" class="chp" onclick="xAll()">Mostrar todas</button></div>';
  h+=`<p class="mu">${v=='all'?'Todos los días con datos, desde el primero que registraste.':v=='wk'?'Los 7 días de la semana elegida.':v=='weeks'?'Promedio de cada semana, desde la primera con datos.':'Promedio mensual de los últimos 12 meses.'} Toca el círculo para ocultar una serie y la estrella para destacarla.${wide?' Desliza la gráfica hacia los lados para ver todo el período.':''}</p>`;
  if(!n){return h+'<p class="mu">Aún no hay datos registrados para mostrar.</p></div>'}
  if(!vis.length)h+='<p class="mu">Todas las series están ocultas. Toca “Mostrar todas” para verlas de nuevo.</p>';
@@ -678,7 +724,7 @@ function crossView(){const v=st.xv,per=xPeriods(v),vis=XS.filter(S=>!st.xh[S.k])
   pts.forEach(q=>s+=`<circle cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="${hi?rd+1.2:rd}" fill="${S.c}" opacity="${op}"><title>${q.t} · ${S.n}: ${U[S.k](q.v)}</title></circle>`)});
  s+='</svg>';
  h+=`<div id="xwrap" style="overflow-x:auto">${s}</div><div class="xtip" id="xtip"><span class="mu">Toca o desliza sobre la gráfica para ver los valores reales de cada punto.</span></div>`;
- h+=`<p class="mu">Cada serie se muestra como % de su meta (100 % = meta). Sueño: 100 % = ${dur(Math.round(HORARIOS.metaSueno*60))} y la escala llega a 130 % (${hm(HORARIOS.metaSueno*1.3)}). Alimentación y ánimo: 10 / 10 = 100 %. Cumplimiento: 100 % = 100 %. Tiempo perdido va invertido: 0 min = 100 % (arriba) y ${LOST_MAX/60} h o más = 0 %.</p>`;
+ h+=`<p class="mu">Cada serie se muestra como % de su meta (100 % = meta). Sueño: cantidad con 100 % = ${dur(Math.round(metaS()*60))} (la escala llega a 130 %, ${hm(metaS()*1.3)}); calidad = puntaje × 10 %; promedio = (cantidad topada en 100 % + calidad) / 2. Los días sin calidad quedan sin dato en calidad y promedio. Meditación: 100 % = ${goals().medMin} min. Alimentación y ánimo: 10 / 10 = 100 %. Cumplimiento: 100 % = 100 %. Tiempo perdido va invertido: 0 min = 100 % (arriba) y ${LOST_MAX/60} h o más = 0 %.</p>`;
  h+=`<p class="mu">Fila “Imp.”: <b style="color:#2f9e44">✓</b> si hiciste lo más importante del día, <b style="color:#e03131">✗</b> si no lo hiciste, y vacío si no tenías nada importante.${v=='weeks'||v=='month'?' En semanas y meses se cuenta cuántos ✓ y ✗ hubo.':''}</p></div>`;
  return h}
 function xTip(ev){const sv=document.getElementById('xsvg'),per=st.xd;if(!sv||!per||!per.length)return;
@@ -686,7 +732,156 @@ function xTip(ev){const sv=document.getElementById('xsvg'),per=st.xd;if(!sv||!pe
  const i=n==1?0:Math.max(0,Math.min(n-1,Math.round((x-XL)/(XW-XL-XR)*(n-1)))),p=per[i],gx=n==1?XL+(XW-XL-XR)/2:XL+(XW-XL-XR)*i/(n-1);
  const g=document.getElementById('xg');g.setAttribute('x1',gx);g.setAttribute('x2',gx);
  const im=p.im,imt=p.days.length==1?(im.si?'✓ Sí lo hice':im.no?'✗ No lo hice':im.na?'No había nada importante':''):((im.si||im.no)?'✓ '+im.si+' · ✗ '+im.no:'');
- document.getElementById('xtip').innerHTML=`<b>${esc(p.t)}</b>`+XS.filter(S=>!st.xh[S.k]).map(S=>`<span><i style="background:${S.c}"></i>${S.n}: <b>${p.v[S.k]==null?'sin datos':st.xu[S.k](p.v[S.k])}</b></span>`).join('')+(imt?`<span>Lo más importante: <b>${imt}</b></span>`:'')}
+ document.getElementById('xtip').innerHTML=`<b>${esc(p.t)}</b>`+xActive().filter(S=>!st.xh[S.k]).map(S=>`<span><i style="background:${S.c}"></i>${S.n}: <b>${p.v[S.k]==null?'sin datos':st.xu[S.k](p.v[S.k])}</b></span>`).join('')+(imt?`<span>Lo más importante: <b>${imt}</b></span>`:'')}
+
+/* =====================================================================
+   METAS (cfg_goals): tarjeta en la pestaña Sueño
+   ===================================================================== */
+const GR={sleepH:[7,12,'La meta de sueño debe estar entre 7 y 12 horas.'],medMin:[1,240,'La meta de meditación debe estar entre 1 y 240 minutos.'],lateMin:[0,180,'Los minutos de tolerancia deben estar entre 0 y 180.'],lowSleepH:[3,12,'Las horas de una noche corta deben estar entre 3 y 12.'],lowSleepRun:[1,7,'Las noches seguidas deben estar entre 1 y 7.']};
+function goalSet(k,v){const r=GR[k],n=+v;if(v===''||!isFinite(n)||n<r[0]||n>r[1]){alert(r[2]);return render()}
+ const g={...goals()};g[k]=(k=='sleepH'||k=='lowSleepH')?Math.round(n*4)/4:Math.round(n);
+ db.cfg.goals=g;persist();window.cloud&&cloud.save('cfg','goals',g);render()}
+function goalsCard(){const g=goals();
+ return`<div class="card"><label style="margin-top:0">Meta de sueño (h)<input type="number" inputmode="decimal" min="7" max="12" step="0.25" value="${metaS()}" onchange="goalSet('sleepH',this.value)"></label><p class="mu" style="margin:4px 0 0">Define los colores, la hora ideal para acostarte y la escala de Cruces.</p>`
+ +`<details><summary>Otras metas y alertas</summary><div class="row"><label>Meditación (min al día)<input type="number" inputmode="numeric" min="1" value="${g.medMin}" onchange="goalSet('medMin',this.value)"></label><label>Trasnochada: más de (min)<input type="number" inputmode="numeric" min="0" value="${g.lateMin}" onchange="goalSet('lateMin',this.value)"></label></div><div class="row"><label>Noche corta: menos de (h)<input type="number" inputmode="decimal" step="0.25" value="${g.lowSleepH}" onchange="goalSet('lowSleepH',this.value)"></label><label>Avisar tras (noches seguidas)<input type="number" inputmode="numeric" min="1" value="${g.lowSleepRun}" onchange="goalSet('lowSleepRun',this.value)"></label></div></details></div>`}
+
+/* =====================================================================
+   METAS SEMANALES (cfg_week) y registro diario wk_AAAA-MM-DD → {m:{idMeta:minutos}}
+   ===================================================================== */
+const WK_DEF=[{id:'g1',n:'Precálculo',cat:'cole',type:'min',target:600},{id:'g2',n:'Entrenamiento',cat:'ejer',type:'min',target:480},{id:'g3',n:'Negocio',cat:'',type:'dias',target:3}];
+const weekGoals=()=>{const c=db.cfg&&db.cfg.week;return(c&&Array.isArray(c.items))?c.items.filter(x=>x&&x.id&&x.n).slice(0,3):WK_DEF.map(x=>({...x}))};
+const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+function wkSum(g,days){let m=0,n=0;days.forEach(x=>{const r=db.wk[x],v=r&&r.m?+r.m[g.id]||0:0;m+=v;if(v>0)n++});return g.type=='dias'?n:m}
+function wkSave(items){db.cfg.week={items:items.slice(0,3)};persist();window.cloud&&cloud.save('cfg','week',db.cfg.week);render()}
+function wkToggle(){st.wkEdit=!st.wkEdit;render()}
+function wkSet(i,k,v){const L=weekGoals().map(x=>({...x})),g=L[i];if(!g)return;
+ if(k=='n'){v=String(v).trim();if(!v){alert('El nombre no puede quedar vacío.');return render()}}
+ if(k=='target'){v=Math.round(+v);if(!(v>=1)){alert('El objetivo debe ser 1 o más.');return render()}}
+ g[k]=v;wkSave(L)}
+function wkCat(i,el){if(el.value=='__new'){openCats();return}wkSet(i,'cat',el.value)}
+function wkAdd(){const L=weekGoals().map(x=>({...x}));if(L.length>=3)return;L.push({id:'g'+Date.now().toString(36),n:'Nueva meta',cat:'',type:'min',target:60});wkSave(L)}
+function wkDel(i){const L=weekGoals().map(x=>({...x}));if(!L[i]||!confirm('¿Quitar la meta “'+L[i].n+'”? Los minutos ya registrados no se borran.'))return;L.splice(i,1);wkSave(L)}
+function wkEditor(){const L=weekGoals(),cl=catList();
+ let h='<h3>Editar metas</h3>';
+ L.forEach((g,i)=>{h+=`<div class="gr"><label style="margin-top:0">Nombre<input type="text" maxlength="30" value="${qa(g.n)}" onchange="wkSet(${i},'n',this.value)"></label><div class="row"><label>Categoría del calendario<select onchange="wkCat(${i},this)"><option value="">Sin categoría</option>${cl.map(c=>`<option value="${qa(c.id)}"${g.cat==c.id?' selected':''}>${esc(c.n)}</option>`).join('')}<option value="__new">＋ Crear categoría nueva…</option></select></label><label>Tipo<select onchange="wkSet(${i},'type',this.value)"><option value="min"${g.type!='dias'?' selected':''}>Minutos por semana</option><option value="dias"${g.type=='dias'?' selected':''}>Días por semana</option></select></label><label>Objetivo (${g.type=='dias'?'días':'minutos'})<input type="number" inputmode="numeric" min="1" value="${g.target}" onchange="wkSet(${i},'target',this.value)"></label></div><div class="acts"><button type="button" class="btn" onclick="wkDel(${i})">Quitar meta</button></div></div>`});
+ if(L.length<3)h+=`<div class="acts"><button type="button" class="btn" onclick="wkAdd()">+ Agregar meta (máx. 3)</button></div>`;
+ return h}
+function weekCard(ref,edit){const w=weekDays(ref),ds=w.filter(x=>x<=TODAY),g=weekGoals();
+ const sa=mean(ds.map(x=>val('sleep',x)).filter(v=>v!=null)),pa=mean(ds.map(x=>val('plan',x)).filter(v=>v!=null));
+ const md=ds.reduce((a,x)=>a+((db.med[x]&&+db.med[x].min)||0),0),late=ds.filter(lateDay),sr=late.filter(x=>db.sleep[x].why=='sinrazon').length;
+ let h=`<div class="card"><div class="dh2"><h3 style="margin:0">Esta semana</h3><span class="mu">${fs(w[0])} – ${fs(w[6])}</span></div>`;
+ h+=g.length?g.map(x=>{const v=wkSum(x,ds),dias=x.type=='dias',p=Math.min(100,Math.round(v/(x.target||1)*100));
+  return`<div style="margin-top:10px"><div class="dh2"><b>${esc(x.n)}</b><span>${dias?v+' de '+x.target+' días':dur(v)+' / '+dur(x.target)}</span></div><div class="pbar"><i style="width:${p}%"></i></div></div>`}).join(''):'<p class="mu">No hay metas semanales.</p>';
+ h+=`<div class="stats" style="margin-top:12px"><div class="stat"><span>Sueño medio</span><b>${sa==null?'—':hm(sa)}</b><span>meta ${hm(metaS())}</span></div><div class="stat"><span>Trasnochadas</span><b>${late.length}</b><span>${sr} sin razón</span></div><div class="stat"><span>Meditación</span><b>${dur(md)}</b><span>en la semana</span></div><div class="stat"><span>Cumplimiento medio</span><b>${pa==null?'—':Math.round(pa)+' %'}</b></div></div>`;
+ if(edit)h+=`<div class="acts"><button type="button" class="btn" onclick="wkToggle()">${st.wkEdit?'Cerrar editor':'Editar metas'}</button></div>`+(st.wkEdit?wkEditor():'');
+ return h+'</div>'}
+
+/* =====================================================================
+   CRUCES: series (sueño en 4 modos + meditación)
+   ===================================================================== */
+const XS=[
+ {k:'sleep',n:'Sueño',c:'#5b6cff'},
+ {k:'sleepq',n:'Sueño (calidad)',c:'#ae3ec9'},
+ {k:'sleepa',n:'Sueño (promedio)',c:'#5b6cff'},
+ {k:'food',n:'Alimentación',c:'#2f9e44'},
+ {k:'lost',n:'Tiempo perdido (invertido)',c:'#e8590c'},
+ {k:'mood',n:'Ánimo',c:'#d6336c'},
+ {k:'plan',n:'Cumplimiento',c:'#0c8599'},
+ {k:'med',n:'Meditación',c:'#f59f00'}
+];
+const SMODES=[['cant','Cantidad'],['cal','Calidad'],['prom','Promedio'],['amb','Ambas']];
+const sleepMode=()=>{try{const m=localStorage.getItem('bit_sleepmode');return SMODES.some(x=>x[0]==m)?m:'cant'}catch(e){return'cant'}};
+function xActive(){const m=sleepMode();
+ return XS.filter(S=>S.k=='sleep'?(m=='cant'||m=='amb'):S.k=='sleepq'?(m=='cal'||m=='amb'):S.k=='sleepa'?m=='prom':true).map(S=>S.k=='sleep'&&m=='amb'?{...S,n:'Sueño (cantidad)'}:S)}
+function xSleepMode(m){try{localStorage.setItem('bit_sleepmode',m)}catch(e){}render()}
+function sleepModeBar(){const m=sleepMode();return'<div style="margin-bottom:10px"><span class="mu">Sueño en la gráfica:</span><div class="chips" style="margin-top:4px">'+SMODES.map(([k,l])=>`<button type="button" class="chp${m==k?' on':''}" onclick="xSleepMode('${k}')">${l}</button>`).join('')+'</div></div>'}
+function xVal(k,d){
+ if(k=='sleepq'){const e=db.sleep[d];return e&&e.q!=null?+e.q:null}
+ if(k=='sleepa'){const a=val('sleep',d),e=db.sleep[d];if(a==null||!e||e.q==null)return null;return(Math.min(a/metaS()*100,100)+e.q*10)/2}
+ if(k=='med'){const e=db.med[d];return e&&e.min!=null?+e.min:null}
+ return val(k,d)}
+function xFirst(){let f=null;['sleep','food','lost','mood','plan','med'].forEach(k=>Object.keys(db[k]||{}).forEach(d=>{if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&d<=TODAY&&(!f||d<f)&&xVal(k,d)!=null)f=d}));return f}
+
+/* =====================================================================
+   EXPORTAR PARA IA y "ALGO NO VA BIEN": solo generan texto para copiar y pegar (cfg_ai.goals guarda mis metas en texto)
+   ===================================================================== */
+const AI_INS='Analiza mis datos del periodo. Relaciona sueño (cantidad y calidad), alimentación, tiempo perdido, ánimo, meditación y cumplimiento; usa el diario para explicar los días difíciles; dime en qué estoy fallando, en qué días y qué sí está funcionando; propón soluciones pequeñas y concretas compatibles con mis límites (10 min diarios, nada rígido). Sé honesto y crítico, no me halagues.';
+const AI_RANGES=[['7','Últimos 7 días'],['14','Últimos 14 días'],['30','Últimos 30 días'],['mes','Mes actual'],['todo','Todo']];
+const aiGoalsTxt=()=>{const a=db.cfg&&db.cfg.ai;return a&&typeof a.goals=='string'?a.goals:''};
+const wdS=d=>P(d).toLocaleDateString('es',{weekday:'short'});
+const oneLine=t=>String(t==null?'':t).replace(/\s*\n\s*/g,' ').trim();
+const cellT=x=>x==null||x===''?'–':oneLine(x).replace(/\|/g,'/');
+function hasData(d){const p=db.plan[d];return['sleep','food','lost','mood','diary','med','wk'].some(s=>db[s][d])||!!(p&&(p.imp||p.cum!=null||p.done>0))}
+function aiDates(r){let a;
+ if(r=='mes')a=TODAY.slice(0,8)+'01';
+ else if(r=='todo'){a=TODAY;SECS.forEach(s=>{if(s!='cfg')Object.keys(db[s]).forEach(x=>{if(/^\d{4}-\d{2}-\d{2}$/.test(x)&&x<a)a=x})})}
+ else a=add(TODAY,-(+r-1));
+ const o=[];for(let d=a;d<=TODAY;d=add(d,1))o.push(d);return o}
+function aiSummary(L){const g=goals(),wg=weekGoals(),pk=f=>L.map(f).filter(v=>v!=null);
+ const sl=pk(d=>val('sleep',d)),qq=pk(d=>{const e=db.sleep[d];return e&&e.q!=null?+e.q:null}),fo=pk(d=>val('food',d)),lo=pk(d=>val('lost',d)),mo=pk(d=>val('mood',d)),me=pk(d=>{const e=db.med[d];return e&&e.min!=null?+e.min:null}),pl=pk(d=>val('plan',d));
+ const late=L.filter(lateDay),w=k=>late.filter(d=>db.sleep[d].why==k).length,o=[];
+ o.push('- Periodo: '+L[0]+' al '+L[L.length-1]+' ('+L.length+' días; '+L.filter(hasData).length+' con algún registro)');
+ o.push('- Sueño (cantidad): '+(sl.length?'media '+hm(mean(sl))+' en '+sl.length+' noches; '+Math.round(sl.filter(v=>v>=metaS()-1e-6).length/sl.length*100)+' % de las noches en la meta ('+r1(metaS())+' h)':'sin datos'));
+ o.push('- Calidad del sueño: '+(qq.length?'media '+r1(mean(qq))+' / 10 ('+qq.length+' registros)':'sin datos'));
+ o.push('- Trasnochadas (acostarme más de '+g.lateMin+' min después de la hora ideal): '+late.length+(late.length?' (evento '+w('evento')+', sin razón '+w('sinrazon')+', otro '+w('otro')+', sin motivo indicado '+(late.length-w('evento')-w('sinrazon')-w('otro'))+')':''));
+ o.push('- Alimentación: '+(fo.length?'media '+r1(mean(fo))+' / 10':'sin datos'));
+ o.push('- Tiempo perdido: '+(lo.length?'media '+Math.round(mean(lo))+' min por día registrado; '+lo.filter(v=>v>60).length+' días sobre 60 min':'sin datos'));
+ o.push('- Ánimo: '+(mo.length?'media '+r1(mean(mo))+' / 10':'sin datos'));
+ o.push('- Meditación: '+(me.length?'total '+me.reduce((a,b)=>a+b,0)+' min; media '+Math.round(mean(me))+' min por día registrado (meta '+g.medMin+' min)':'sin datos'));
+ o.push('- Cumplimiento medio: '+(pl.length?Math.round(mean(pl))+' %':'sin datos'));
+ if(wg.length){const ws=[...new Set(L.map(x=>mon(x)))];
+  o.push('- Metas semanales'+(ws.length>8?' (últimas 8 semanas)':'')+':');
+  ws.slice(-8).forEach(m=>{const ds=weekDays(m).filter(x=>L.includes(x));o.push('  - Semana del '+fs(m)+' ('+ds.length+' días del periodo): '+wg.map(x=>x.n+' '+(x.type=='dias'?wkSum(x,ds)+' de '+x.target+' días':dur(wkSum(x,ds))+' / '+dur(x.target))).join(' · '))})}
+ return o}
+function buildAI(s){const L=aiDates(s.range),bad=s.mode=='bad',g=goals(),wg=weekGoals(),o=[];
+ o.push('# '+(bad?'Algo no va bien: análisis de mi bitácora':'Análisis de mi bitácora'));
+ o.push('Periodo: '+L[0]+' al '+L[L.length-1]+' ('+L.length+' días). Generado el '+TODAY+'.','');
+ o.push('## Instrucciones para la IA',AI_INS);
+ if(bad)o.push('','Además responde: ¿Qué cambió respecto a las semanas anteriores? ¿Desde qué día empezó el bajón? ¿Qué patrón se repite?');
+ o.push('','## Mis metas',aiGoalsTxt().trim()||'(Sin texto propio: puedes escribir tus metas en el panel antes de copiar.)','','Metas automáticas de la app:','- Sueño: '+r1(metaS())+' h por noche; trasnochada = acostarme más de '+g.lateMin+' min después de la hora ideal (según la hora de levantarme planeada).','- Meditación: '+g.medMin+' min al día.');
+ wg.forEach(x=>o.push('- '+x.n+': '+x.target+(x.type=='dias'?' días por semana (cuenta los días con minutos registrados)':' min por semana')+(x.cat?' · categoría '+catOf(x.cat).n:'')));
+ o.push('','## Resumen del periodo',...aiSummary(L));
+ if(bad){const pv=[];for(let i=14;i>=1;i--)pv.push(add(L[0],-i));o.push('','## Resumen de los 14 días anteriores (para comparar)',...aiSummary(pv))}
+ /* tabla por día */
+ const days=L.filter(hasData);o.push('','## Tabla por día');
+ if(days.length){const H=['Fecha','Día','Acostarme','Levantarme','Horas','Calidad','Motivo trasnochada','Alimentación','Perdido (min)','Ánimo','Emociones','Meditación (min)','Cumplimiento %','Lo más importante',...wg.map(x=>'Min '+x.n)];
+  o.push('| '+H.join(' | ')+' |','|'+H.map(()=>'---').join('|')+'|');
+  const WHY={evento:'evento',sinrazon:'sin razón',otro:'otro'},IMPL={si:'Sí',no:'No',na:'N/A'};
+  days.forEach(d=>{const sl=db.sleep[d]||{},mo=db.mood[d]||{},p=db.plan[d]||{},hv=val('sleep',d),cu=val('plan',d),wr=db.wk[d]&&db.wk[d].m;
+   const row=[d,wdS(d),sl.bed,sl.wake,hv==null?null:hm(hv),sl.q,lateDay(d)?(WHY[sl.why]||'(sin indicar)'):null,db.food[d]&&db.food[d].score,val('lost',d),mo.score,(mo.emo||[]).concat(mo.other?[mo.other]:[]).join(', '),db.med[d]&&db.med[d].min,cu==null?null:Math.round(cu),IMPL[p.imp],...wg.map(x=>wr&&wr[x.id]!=null?wr[x.id]:null)];
+   o.push('| '+row.map(cellT).join(' | ')+' |')})}
+ else o.push('(Sin registros en el periodo.)');
+ /* notas */
+ const nt=[];L.forEach(d=>{const l=db.lost[d],s2=db.sleep[d],f=db.food[d],h='- '+d+' ('+wdS(d)+') · ';
+  if(l&&l.note)nt.push(h+'Tiempo perdido ('+l.min+' min): '+oneLine(l.note));
+  if(s2&&s2.note)nt.push(h+'Sueño: '+oneLine(s2.note));
+  if(f&&f.note)nt.push(h+'Alimentación: '+oneLine(f.note))});
+ o.push('','## Notas de tiempo perdido, sueño y alimentación',...(nt.length?nt:['(Sin notas.)']));
+ /* bloques no hechos, agrupados por categoría */
+ const bl=[];L.forEach(d=>{const p=db.plan[d];if(!p||!Array.isArray(p.blocks)||!(d<TODAY||p.imp||p.cum!=null))return;
+  const by={};sortB(p.blocks).filter(b=>b.st!='hecho'&&!isBuf(b)).forEach(b=>{const n=catOf(b.c).n;(by[n]=by[n]||[]).push(b.t+(b.st=='nohecho'?' (no hecho)':b.st=='movido'?' (movido)':''))});
+  const k=Object.keys(by);if(k.length)bl.push('- '+d+' ('+wdS(d)+'): '+k.map(n=>n+': '+by[n].join(', ')).join(' · '))});
+ o.push('','## Bloques no hechos por día (por categoría, sin imprevistos)',...(bl.length?bl:['(Ninguno.)']));
+ if(s.diary){const dd=L.filter(d=>db.diary[d]&&db.diary[d].text);o.push('','## Diario');if(dd.length)dd.forEach(d=>o.push('','### '+d+' ('+wdS(d)+')',db.diary[d].text.trim()));else o.push('(Sin entradas de diario en el periodo.)')}
+ return o.join('\n')+'\n'}
+function aiOpen(mode){const el=$('#aip');if(!el)return;st.ai={mode,range:mode=='bad'?'14':'7',diary:true,text:''};el.hidden=false;aiRender();if(el.scrollIntoView)el.scrollIntoView({block:'start'})}
+function aiClose(){const el=$('#aip');if(el){el.hidden=true;el.innerHTML=''}st.ai=null}
+function aiRange(r){st.ai.range=r;aiRender()}
+function aiDiary(v){st.ai.diary=v;aiRender()}
+function aiGoals(v){db.cfg.ai={goals:String(v).trim()};persist();window.cloud&&cloud.save('cfg','ai',db.cfg.ai);aiRender()}
+function aiRender(){const s=st.ai,el=$('#aip');if(!s||!el)return;
+ s.text=buildAI(s);const n=s.text.length;
+ el.innerHTML=`<div class="dh2"><h3 style="margin:0">${s.mode=='bad'?'Algo no va bien':'Exportar para IA'}</h3><button type="button" class="btn" onclick="aiClose()">Cerrar</button></div>`
+ +`<p class="mu">Solo genera texto para que lo copies y lo pegues en la IA que uses. No se envía nada a ningún servicio.</p>`
+ +`<label style="margin-top:6px">Rango</label><div class="chips">${AI_RANGES.map(([k,l])=>`<button type="button" class="chp${s.range==k?' on':''}" onclick="aiRange('${k}')">${l}</button>`).join('')}</div>`
+ +`<label class="sw"><input type="checkbox"${s.diary?' checked':''} onchange="aiDiary(this.checked)"><span>Incluir diario</span></label>`
+ +`<label>Mis metas (texto libre que va en el informe)<textarea rows="3" placeholder="Ej.: dormir a tiempo, entrenar, avanzar en mis proyectos…" onchange="aiGoals(this.value)">${esc(aiGoalsTxt())}</textarea></label>`
+ +(n>40000?`<p class="wr" style="margin-bottom:0"><b>El texto tiene ${n} caracteres</b>: es largo para pegarlo en una IA. Prueba un rango menor o quita el diario.</p>`:`<p class="mu" style="margin-bottom:0">${n} caracteres</p>`)
+ +`<textarea id="aitx" rows="14" readonly style="font:13px/1.4 ui-monospace,Menlo,Consolas,monospace">${esc(s.text)}</textarea>`
+ +`<div class="acts"><button type="button" class="btn pri" onclick="aiCopy()">Copiar</button><button type="button" class="btn" onclick="aiDl()">Descargar .md</button></div><p id="aimsg" class="ok"></p>`}
+function aiCopy(){const t=st.ai.text,ok=()=>{const m=$('#aimsg');if(m)m.textContent='Copiado ✓'},old=()=>{const x=$('#aitx');x.select();try{document.execCommand('copy');ok()}catch(e){alert('No se pudo copiar. Selecciona el texto y cópialo a mano.')}};
+ if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(ok,old);else old()}
+function aiDl(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([st.ai.text],{type:'text/markdown'}));a.download='bitacora-ia-'+TODAY+'.md';a.click()}
 
 /* ---------- Modo oscuro / claro ---------- */
 function themeNow(){const r=document.documentElement;return r.dataset.theme||(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}
