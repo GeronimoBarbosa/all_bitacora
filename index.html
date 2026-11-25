@@ -137,6 +137,26 @@ input[type=text].sm{max-width:240px;padding:6px 10px;font-size:.9rem}
 .gr{border-top:1px solid var(--bd);padding:8px 0 12px;margin-top:10px}
 details summary{cursor:pointer;margin-top:14px;color:var(--ac)}
 .lock #aip{display:none}
+:root{--bad:#c92a2a}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bad:#ff8787}}
+:root[data-theme=dark]{--bad:#ff8787}
+.mb{width:100%;height:auto;display:block;margin-top:10px}
+.ob{display:block;width:100%;text-align:left;border:1px solid var(--bd);border-left:6px solid var(--oc);background:var(--cd);background:color-mix(in srgb,var(--oc) 12%,var(--cd));border-radius:6px;padding:8px 10px;margin-top:8px;cursor:pointer}
+.ob.on{box-shadow:0 0 0 2px var(--tx)}
+.ob small{color:var(--mu);font-weight:400}
+.ob .on1{display:block}.ob .on2{display:block;font-size:.85rem;color:var(--mu)}
+.obp{border:1px solid var(--bd);border-radius:6px;padding:10px;margin-top:4px}
+.st-late,.st-over{color:var(--bad);font-weight:600}.st-ahead,.st-ok,.st-done{color:var(--ok);font-weight:600}
+.of{border-left:6px solid var(--oc);padding:2px 0 4px 10px;margin-top:14px}
+.seg.big button{padding:16px 2px;font-size:1rem}
+.seg.big button.on{background:var(--cd);background:color-mix(in srgb,var(--oc) 28%,var(--cd));border-color:var(--oc);box-shadow:inset 0 0 0 2px var(--oc);font-weight:700;color:var(--tx)}
+.sw8{width:34px;height:34px;border-radius:50%;border:2px solid var(--bd);padding:0;cursor:pointer;flex:none}
+.sw8.on{box-shadow:0 0 0 3px var(--tx)}
+.lg{display:inline-flex;align-items:center;gap:6px;font-size:.8rem;color:var(--mu);margin-top:4px}
+.lg i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.dotc{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+.bk{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.bk .mu{flex:1;min-width:180px}
+.tb{border-collapse:collapse;margin-top:8px;font-size:.9rem}.tb th{color:var(--mu);font-weight:400;text-align:left}.tb td,.tb th{padding:4px 12px 4px 0;white-space:nowrap}
 @media(max-width:420px){.tabs button{padding:8px 11px}.ib{width:56px}}
 </style>
 </head>
@@ -215,12 +235,12 @@ const legacyEmo=e=>{const a=[...(e.emo||[])];if(e.other&&!a.includes(e.other))a.
 function emosSave(items){db.cfg.emos={items};persist();window.cloud&&cloud.save('cfg','emos',db.cfg.emos)}
 function learnEmos(l){const b=emoAll([]),nw=l.filter(x=>!b.some(y=>nrm(y)==nrm(x)));if(nw.length)emosSave([...emosCustom(),...nw])}
 const ST={pendiente:'Pendiente',hecho:'Hecho',movido:'Movido',nohecho:'No hecho'};
-const SECNAME={close:'Cierre del día',plan:'Calendario',sleep:'Sueño',food:'Alimentación',lost:'Tiempo perdido',mood:'Ánimo',diary:'Diario',cross:'Cruces'};
+const SECNAME={close:'Cierre del día',plan:'Calendario',sleep:'Sueño',food:'Alimentación',lost:'Tiempo perdido',mood:'Ánimo',diary:'Diario',cross:'Cruces',goals:'Metas'};
 /* ===================== fin de la configuración ===================== */
 
-const SECS=['sleep','food','lost','mood','diary','plan','cfg','med','wk'];
+const SECS=['sleep','food','lost','mood','diary','plan','cfg','med','wk','cy'];
 /* Metas editables: cfg_goals → {sleepH,medMin,lateMin,lowSleepH,lowSleepRun} (misma ruta users/{uid}/entries) */
-const GOALS_DEF={sleepH:9,medMin:20,lateMin:45,lowSleepH:8,lowSleepRun:3};
+const GOALS_DEF={sleepH:9,medMin:20,lateMin:45,lowSleepH:8,lowSleepRun:3,bikeMin:60};
 const goals=()=>{const g={...GOALS_DEF},c=db.cfg&&db.cfg.goals;if(c&&typeof c=='object')Object.keys(GOALS_DEF).forEach(k=>{const v=+c[k];if(c[k]!=null&&c[k]!==''&&isFinite(v)&&v>=0)g[k]=v});return g};
 const metaS=()=>{const v=goals().sleepH;return v>=7&&v<=12?v:9}; // meta de sueño actual (horas)
 const CFG={
@@ -291,7 +311,7 @@ function render(){
   h+='<div class="tabs" style="margin-top:8px">'+[['day','Día'],['week','Semana'],['month','Mes'],['year','Año']].map(([k,l])=>`<button class="${k==st.view?'on':''}" onclick="st.view='${k}';render()">${l}</button>`).join('')+'</div>';
   h+='<div class="card"><div class="nav"><button class="btn" aria-label="Anterior" onclick="nav(-1)">‹</button><strong>'+label()+'</strong><button class="btn" aria-label="Siguiente" onclick="nav(1)">›</button></div>';
   h+=(st.view=='day'?dayView():periodView())+'</div>';if(st.sec=='sleep')h+=goalsCard()}
- else h+=({close:closeView,plan:planView,diary:diaryView,cross:crossView})[st.sec]();
+ else h+=({close:closeView,plan:planView,diary:diaryView,cross:crossView,goals:goalsView})[st.sec]();
  const ow=document.getElementById('xwrap');if(ow)st.xsl=ow.scrollLeft;
  $('#app').innerHTML=h;
  const nw=document.getElementById('xwrap');if(nw)nw.scrollLeft=st.xsl==null?nw.scrollWidth:st.xsl;
@@ -416,16 +436,30 @@ function lastBed(d){const k=Object.keys(db.sleep).filter(x=>x<d&&db.sleep[x].bed
  if(k)return db.sleep[k].bed;
  const b=tplBlocks(add(d,-1)).find(x=>/acostar/i.test(x.t));return b?b.s:'19:00'}
 const minPref=()=>{try{return localStorage.getItem('bit_min')==='1'}catch(e){return false}};
-/* Prellenado de minutos por meta: bloques "hecho" marcados a mano (sin auto) de la categoría de la meta */
-function wkPrefill(d){const p=db.plan[d],o={};weekGoals().forEach(g=>{let s=0;if(p&&g.cat&&Array.isArray(p.blocks))p.blocks.forEach(b=>{if(b.st=='hecho'&&!b.auto&&b.c==g.cat)s+=+b.d||0});o[g.id]=s>0?String(s):''});return o}
-function cfInit(d){const sl=db.sleep[d]||{},fo=db.food[d]||{},lo=db.lost[d]||{},mo=db.mood[d]||{},di=db.diary[d]||{},pl=db.plan[d]||{},me=db.med[d]||{},wr=db.wk[d];
- let wk;if(wr&&wr.m){wk={};weekGoals().forEach(g=>{wk[g.id]=wr.m[g.id]==null?'':String(wr.m[g.id])})}else wk=wkPrefill(d);
- return{date:d,dirty:false,bed:sl.bed||lastBed(d),wake:sl.wake||wakeFor(d),sq:sl.q||null,why:sl.why||null,food:fo.score||null,min:lo.min==null?'':lo.min,lnote:lo.note||'',mmin:me.min==null?'':me.min,wk,mood:mo.score||null,emo:legacyEmo(mo),q:'',diary:di.text||'',imp:pl.imp||null,cum:pl.cum==null?'':pl.cum,org:orgPref(),mini:minPref()}}
+/* Prellenado de minutos por objetivo: bloques "hecho" marcados a mano (sin auto) de su categoría, solo si esa categoría la usa un único objetivo activo */
+function objPrefill(d,ao){const p=db.plan[d],o={};if(!p||!Array.isArray(p.blocks))return o;
+ ao.forEach(({o:x})=>{if(x.mode=='dias'||!x.cat)return;if(ao.filter(y=>y.o.cat==x.cat).length!=1)return;
+  let s=0;p.blocks.forEach(b=>{if(b.st=='hecho'&&!b.auto&&b.c==x.cat)s+=+b.d||0});if(s>0)o[x.id]=String(s)});return o}
+function cfObjSync(c){const d=c.date,wr=db.wk[d],ao=activeObjs(d);let pre=null;
+ ao.forEach(({o})=>{
+  if(o.mode=='dias'){if(!(o.id in c.os)){let s=null;if(wr&&wr.s&&wr.s[o.id]!=null)s=+wr.s[o.id]==1?1:0;else if(wr&&wr.m&&wr.m[o.id]!=null)s=+wr.m[o.id]>0?1:0;c.os[o.id]=s}}
+  else if(!(o.id in c.ob)){let v='';if(wr&&wr.o&&wr.o[o.id]!=null)v=String(wr.o[o.id]);else if(wr&&wr.m&&wr.m[o.id]!=null)v=String(wr.m[o.id]);else if(!wr){pre=pre||objPrefill(d,ao);v=pre[o.id]||''}c.ob[o.id]=v}
+  if(o.ctr&&!(o.id in c.oc))c.oc[o.id]=wr&&wr.c&&wr.c[o.id]!=null?String(wr.c[o.id]):''});
+ return ao}
+function cfInit(d){const sl=db.sleep[d]||{},fo=db.food[d]||{},lo=db.lost[d]||{},mo=db.mood[d]||{},di=db.diary[d]||{},pl=db.plan[d]||{},me=db.med[d]||{},cy=db.cy[d]||{};
+ const c={date:d,dirty:false,bed:sl.bed||lastBed(d),wake:sl.wake||wakeFor(d),sq:sl.q||null,why:sl.why||null,food:fo.score||null,min:lo.min==null?'':lo.min,lnote:lo.note||'',mmin:me.min==null?'':me.min,ob:{},os:{},oc:{},seen:{},opg:0,cymin:cy.min==null?'':cy.min,cykm:cy.km==null?'':cy.km,cyuni:!!cy.uni,mood:mo.score||null,emo:legacyEmo(mo),q:'',diary:di.text||'',imp:pl.imp||null,cum:pl.cum==null?'':pl.cum,org:orgPref(),mini:minPref()};
+ cfObjSync(c);return c}
 function cfSet(k,v){const c=st.cf;if(!c)return;c[k]=v;c.dirty=true;st.flash='';if(k=='bed'||k=='wake')clive()}
 function cfAdd(n){const c=st.cf;c.min=Math.max(0,(+c.min||0)+n);c.dirty=true;$('#clmin').value=c.min}
 function cfAddM(n){const c=st.cf;c.mmin=Math.max(0,(+c.mmin||0)+n);c.dirty=true;$('#cmmin').value=c.mmin}
-function cfWk(id,v){const c=st.cf;c.wk[id]=v;c.dirty=true;st.flash=''}
-function cfWkAdd(id,n){const c=st.cf,v=Math.max(0,(+c.wk[id]||0)+n);c.wk[id]=String(v);c.dirty=true;const el=document.getElementById('cwk_'+id);if(el)el.value=v}
+function cfOb(id,v){const c=st.cf;if(!c)return;c.ob[id]=v;c.dirty=true;st.flash=''}
+function cfObAdd(id,n){const c=st.cf,v=Math.max(0,(+c.ob[id]||0)+n);c.ob[id]=String(v);c.dirty=true;const el=document.getElementById('cob_'+id);if(el)el.value=v}
+function cfOs(id,v,el){const c=st.cf;c.os[id]=v;c.dirty=true;st.flash='';el.parentNode.querySelectorAll('button').forEach((b,i)=>b.classList.toggle('on',(i==0?1:0)==v))}
+function cfOc(id,v){const c=st.cf;c.oc[id]=v;c.dirty=true;st.flash=''}
+function cfOcAdd(id,n){const c=st.cf,v=Math.max(0,(+c.oc[id]||0)+n);c.oc[id]=String(v);c.dirty=true;const el=document.getElementById('coc_'+id);if(el)el.value=v}
+function cfMore(){st.cf.opg=(st.cf.opg||0)+1;render()}
+function cfCyAdd(n){const c=st.cf,v=Math.max(0,(+c.cymin||0)+n);c.cymin=v;c.dirty=true;$('#ccymin').value=v}
+function cfCyU(on){st.cf.cyuni=on;st.cf.dirty=true;st.flash=''}
 function cfOrg(on){st.cf.org=on;st.cf.dirty=true;try{localStorage.setItem('bit_org',on?'1':'0')}catch(e){}}
 function cfMini(on){const c=st.cf;c.mini=on;try{localStorage.setItem('bit_min',on?'1':'0')}catch(e){}render()}
 function impTap(v,el){const c=st.cf;c.imp=c.imp==v?null:v;c.dirty=true;st.flash='';el.parentNode.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v==c.imp))}
@@ -452,15 +486,32 @@ function closeAlerts(d){const a=[],g=goals(),wd=weekDays(d).filter(x=>x<=d);
  if(n>=Math.max(1,Math.round(g.lowSleepRun)))a.push(n+' noches seguidas bajo '+g.lowSleepH+' h de sueño');
  if(d<=TODAY&&!['sleep','food','lost','mood','diary','med'].some(s=>db[s][add(d,-1)]||db[s][add(d,-2)]))a.push('Sin registros de ayer ni de anteayer');
  return a.length?'<div class="al">'+a.map(esc).join('<br>')+'</div>':''}
+function cfObjHTML(c){const ao=cfObjSync(c);let h='<h3 style="margin-bottom:0">Objetivos de hoy</h3>';
+ if(!ao.length)return h+'<p class="mu">No hay objetivos activos este día. Puedes crearlos en la pestaña Metas.</p>';
+ const per=5,pages=Math.ceil(ao.length/per),pg=(c.opg||0)%pages,vis=ao.slice(pg*per,pg*per+per);
+ vis.forEach(x=>c.seen[x.o.id]=1);
+ vis.forEach(({m,o})=>{const k=objCol(o),id=qa(o.id);
+  h+=`<div class="of" style="--oc:${k}">`;
+  if(o.mode=='dias')h+=`<b>${esc(o.n)}</b> <span class="mu">· ${esc(m.n)}</span><div class="mu" style="margin-top:2px">¿Trabajé hoy en esto?</div><div class="seg big" style="grid-template-columns:1fr 1fr"><button type="button" class="${c.os[o.id]===1?'on':''}" onclick="cfOs('${id}',1,this)">Sí</button><button type="button" class="${c.os[o.id]===0?'on':''}" onclick="cfOs('${id}',0,this)">No</button></div>`;
+  else h+=`<label style="margin-top:0"><b>${esc(o.n)}</b> <span class="mu">· ${esc(m.n)} (min)</span><input type="number" id="cob_${id}" inputmode="numeric" min="0" step="5" placeholder="0" value="${qa(c.ob[o.id])}" oninput="cfOb('${id}',this.value)"></label><div class="chips">${[30,60,-30].map(n=>`<button type="button" class="chp" style="border-left:5px solid ${k}" onclick="cfObAdd('${id}',${n})">${n>0?'+':'−'}${Math.abs(n)}</button>`).join('')}</div>`;
+  if(o.ctr)h+=`<label>${esc(o.ctr)} hoy<input type="number" id="coc_${id}" inputmode="numeric" min="0" placeholder="0" value="${qa(c.oc[o.id])}" oninput="cfOc('${id}',this.value)"></label><div class="chips">${[1,2].map(n=>`<button type="button" class="chp" onclick="cfOcAdd('${id}',${n})">+${n}</button>`).join('')}</div>`;
+  h+='</div>'});
+ if(ao.length>per)h+=`<div class="acts"><button type="button" class="btn" onclick="cfMore()">Ver más · ${pg*per+1}–${Math.min(ao.length,pg*per+per)} de ${ao.length}</button></div>`;
+ return h}
+function cyHTML(c){return`<details${st.cyOpen?' open':''} ontoggle="st.cyOpen=this.open"><summary>Cicla hoy (opcional)</summary><label>Minutos<input type="number" id="ccymin" inputmode="numeric" min="0" step="5" placeholder="0" value="${qa(c.cymin)}" oninput="cfSet('cymin',this.value)"></label><div class="chips">${[15,30,60,-15].map(n=>`<button type="button" class="chp" onclick="cfCyAdd(${n})">${n>0?'+':'−'}${Math.abs(n)}</button>`).join('')}</div><label>Kilómetros<input type="number" id="ccykm" inputmode="decimal" min="0" step="0.1" placeholder="0" value="${qa(c.cykm)}" oninput="cfSet('cykm',this.value)"></label><label class="sw"><input type="checkbox"${c.cyuni?' checked':''} onchange="cfCyU(this.checked)"><span>Fui en cicla a la U</span></label></details>`}
+/* Respaldo mensual: aviso discreto si hace más de 30 días que no exportas */
+function bkShow(){try{if(localStorage.getItem('bit_expx')===TODAY)return false;const l=localStorage.getItem('bit_lastexp');return!okD(l)||dd(l,TODAY)>30}catch(e){return false}}
+function bkHide(){try{localStorage.setItem('bit_expx',TODAY)}catch(e){}render()}
+function bkBanner(){return bkShow()?`<div class="card bk"><span class="mu">Hace más de un mes que no exportas tus datos</span><button type="button" class="btn" onclick="exp();render()">Exportar ahora</button><button type="button" class="btn" onclick="bkHide()" aria-label="Ocultar por hoy">✕</button></div>`:''}
 function closeView(){const d=st.cd;if(!st.cf||st.cf.date!=d)st.cf=cfInit(d);
- const c=st.cf,mini=!!c.mini,pl=db.plan[d],q=pl?pstats(pl):null,ef=pl&&pl.cum!=null?pl.cum:(q?q.pct:null),tg=relTag(d),wg=weekGoals();
+ const c=st.cf,mini=!!c.mini,pl=db.plan[d],q=pl?pstats(pl):null,ef=pl&&pl.cum!=null?pl.cum:(q?q.pct:null),tg=relTag(d);
  let h='<div class="card">';
  h+=`<div class="nav"><button class="btn" aria-label="Día anterior" onclick="cNav(-1)">‹</button><strong>${dateLbl(d)}${tg?'<small class="mu" style="display:block;font-weight:400">'+tg+'</small>':''}</strong><button class="btn" aria-label="Día siguiente" onclick="cNav(1)">›</button></div>`;
  h+=`<input type="date" aria-label="Ir a una fecha" value="${d}" onchange="if(this.value){st.cd=this.value;st.cf=null;st.flash='';render()}">`;
  if(st.flash)h+=`<p class="ok">${st.flash}</p>`;
  h+=closeAlerts(d);
  h+=`<label class="sw" style="margin-top:12px"><input type="checkbox"${mini?' checked':''} onchange="cfMini(this.checked)"><span>Cierre mínimo</span></label>`;
- h+=`<p class="mu" style="margin:10px 0 0">${ef!=null?'Cumplimiento de este día: <b>'+ef+' %</b>'+(pl&&pl.cum!=null?' (el que indicaste). ':' ('+q.done+' de '+q.total+' bloques). '):'Aún no hay bloques marcados en el calendario de este día. '}<a href="#" onclick="event.preventDefault();st.pd='${d}';tab('plan')">Abrir calendario de este día</a></p>`;
+ h+=`<p class="mu" style="margin:10px 0 0">${ef!=null?'Qué tanto elegí este día: <b>'+ef+' %</b>'+(pl&&pl.cum!=null?' (el que indicaste). ':' ('+q.done+' de '+q.total+' bloques). '):'Aún no hay bloques marcados en el calendario de este día. '}<a href="#" onclick="event.preventDefault();st.pd='${d}';tab('plan')">Abrir calendario de este día</a></p>`;
  h+=`<div class="row"><label>Hora a la que me acosté ayer<input type="time" value="${c.bed||''}" oninput="cfSet('bed',this.value)"></label><label>Hora a la que me levanté hoy<input type="time" value="${c.wake||''}" oninput="cfSet('wake',this.value)"></label></div><p id="clv"></p>`;
  h+=`<label>¿Qué tanto sentí que descansé la noche que terminó hoy? (1–10)</label>${scoreBtns('cf','sq','food',c.sq)}<p class="mu" style="margin:0">1 = nada descansado. 10 = muy descansado.</p><div id="cwhy"></div>`;
  if(!mini){
@@ -470,17 +521,17 @@ function closeView(){const d=st.cd;if(!st.cf||st.cf.date!=d)st.cf=cfInit(d);
   h+=`<label>¿En qué fue? (opcional)<textarea rows="2" oninput="cfSet('lnote',this.value)">${esc(c.lnote)}</textarea></label>`;
   h+=`<label>Meditación (min)<input type="number" id="cmmin" inputmode="numeric" min="0" step="5" placeholder="0" value="${qa(c.mmin)}" oninput="cfSet('mmin',this.value)"></label>`;
   h+=`<div class="chips"><button type="button" class="chp" onclick="cfAddM(5)">+5</button><button type="button" class="chp" onclick="cfAddM(10)">+10</button><button type="button" class="chp" onclick="cfAddM(-5)">−5</button></div>`;
-  h+=`<h3 style="margin-bottom:0">Minutos de hoy en mis metas</h3>`+(wg.length?wg.map(g=>`<label>${esc(g.n)} (min)<input type="number" id="cwk_${g.id}" inputmode="numeric" min="0" step="5" placeholder="0" value="${qa(c.wk[g.id]==null?'':c.wk[g.id])}" oninput="cfWk('${g.id}',this.value)"></label><div class="chips">${[30,60,-30].map(n=>`<button type="button" class="chp" onclick="cfWkAdd('${g.id}',${n})">${n>0?'+':'−'}${Math.abs(n)}</button>`).join('')}</div>`).join(''):'<p class="mu">Aún no tienes metas semanales. Puedes crearlas en Calendario › Esta semana › Editar metas.</p>');
+  h+=cfObjHTML(c)+cyHTML(c);
   h+=`<h3 style="margin-bottom:0">Lo más importante de hoy</h3><label style="margin-top:6px">¿Hiciste lo más importante que querías hacer hoy?</label><div class="seg" style="grid-template-columns:1fr">${IMP.map(([k,l])=>`<button type="button" data-v="${k}" class="${c.imp==k?'on':''}" onclick="impTap('${k}',this)">${l}</button>`).join('')}</div>`}
- h+=`<label>¿Qué tanto cumplí hoy? (%)<input type="number" id="ccum" inputmode="numeric" min="0" max="100" step="1" placeholder="${q&&q.pct!=null?q.pct+' (según el calendario)':'0 a 100'}" value="${qa(c.cum)}" oninput="cfSet('cum',this.value)"></label>`;
+ h+=`<label>¿Qué tanto elegí mi día? (%)<input type="number" id="ccum" inputmode="numeric" min="0" max="100" step="1" placeholder="${q&&q.pct!=null?q.pct+' (según el calendario)':'0 a 100'}" value="${qa(c.cum)}" oninput="cfSet('cum',this.value)"></label>`;
  h+=`<div class="chips">${[0,25,50,75,100].map(n=>`<button type="button" class="chp" onclick="cfPct(${n})">${n} %</button>`).join('')}</div>`;
- h+=`<p class="mu" style="margin:6px 0 0">Al guardar, ese porcentaje de los bloques del calendario de este día (sin contar imprevistos) se marca como “Hecho”, y es el valor que se usa en Cruces. Si lo dejas vacío, cuenta solo lo que marques en el calendario.</p>`;
+ h+=`<p class="mu" style="margin:6px 0 0">Cuenta qué tanto tomé yo las decisiones de mi día y qué tanto hice de lo que quería hacer. Al guardar, ese porcentaje de los bloques del calendario de este día (sin contar imprevistos) se marca como “Hecho”, y es el valor que se usa en Cruces. Si lo dejas vacío, cuenta solo lo que marques en el calendario.</p>`;
  h+=`<h3 style="margin-bottom:0">Cómo me siento antes de dormir</h3>`+(mini?`<label>Ánimo (1–10)</label>${scoreBtns('cf','mood','mood',c.mood)}<p class="mu" style="margin:0">1 = muy mal. 10 = muy bien.</p>`:moodBox('cf'));
  if(!mini)h+=`<label>Diario<textarea rows="6" placeholder="Escribe lo que quieras recordar de hoy…" oninput="cfSet('diary',this.value)">${esc(c.diary)}</textarea></label>`;
  h+=`<label class="sw"><input type="checkbox"${c.org?' checked':''} onchange="cfOrg(this.checked)"><span>Organizar el día siguiente</span></label>`;
  h+=`<p class="mu" style="margin:6px 0 0">Mañana te levantas a las ${ft(tm(wakeFor(add(d,1))))}: para dormir ${dur(metaS()*60)}, acuéstate a las ${ft(idealBed(d))}.</p>`;
  h+=`<div class="acts"><button class="btn pri lg" onclick="saveClose()">Guardar</button></div></div>`;
- return(wdOf(d)==0?weekCard(d,false):'')+h}
+ return bkBanner()+(wdOf(d)==0?weekCard(d,false):'')+h}
 function saveClose(){const c=st.cf,d=c.date,mini=!!c.mini;
  if(!!c.bed!==!!c.wake)return alert('Completa la hora de acostarte y la de levantarte, o deja las dos vacías.');
  const cumTxt=String(c.cum==null?'':c.cum).trim();
@@ -488,7 +539,10 @@ function saveClose(){const c=st.cf,d=c.date,mini=!!c.mini;
  if(!mini){
   if(c.min!==''&&(isNaN(+c.min)||+c.min<0))return alert('Los minutos perdidos deben ser 0 o más.');
   if(c.mmin!==''&&(isNaN(+c.mmin)||+c.mmin<0))return alert('Los minutos de meditación deben ser 0 o más.');
-  for(const g of weekGoals()){const v=c.wk[g.id];if(v!==''&&v!=null&&(isNaN(+v)||+v<0))return alert('Los minutos de “'+g.n+'” deben ser 0 o más.')}}
+  for(const x of Object.values(c.ob))if(x!==''&&x!=null&&(isNaN(+x)||+x<0))return alert('Los minutos de los objetivos deben ser 0 o más.');
+  for(const x of Object.values(c.oc))if(x!==''&&x!=null&&(isNaN(+x)||+x<0))return alert('Los contadores deben ser 0 o más.');
+  if(c.cymin!==''&&(isNaN(+c.cymin)||+c.cymin<0))return alert('Los minutos de cicla deben ser 0 o más.');
+  if(c.cykm!==''&&(isNaN(+c.cykm)||+c.cykm<0))return alert('Los kilómetros de cicla deben ser 0 o más.')}
  const set=(s,e)=>{db[s][d]=e;window.cloud&&cloud.save(s,d,e)},rm=s=>{if(db[s][d]){delete db[s][d];window.cloud&&cloud.del(s,d)}};
  /* Sueño: se conservan los campos existentes; q (calidad) y why (motivo de la trasnochada) son opcionales */
  const so=db.sleep[d],hasBW=!!(c.bed&&c.wake);
@@ -503,8 +557,13 @@ function saveClose(){const c=st.cf,d=c.date,mini=!!c.mini;
   /* Vacío = 0, solo al guardar el cierre completo */
   set('lost',{min:c.min===''?0:Math.round(+c.min),note:(c.lnote||'').trim()});
   set('med',{min:c.mmin===''?0:Math.round(+c.mmin)});
-  const wo=db.wk[d],m={};weekGoals().forEach(g=>{const v=c.wk[g.id];m[g.id]=v===''||v==null?0:Math.round(+v)});
-  set('wk',{m:{...((wo&&wo.m)||{}),...m}});
+  /* Objetivos: vacío = 0 / No / 0, solo para los que se mostraron; no se toca el campo viejo m */
+  const seen=activeObjs(d).filter(x=>c.seen[x.o.id]);
+  if(seen.length){const wo=db.wk[d]||{},oo={...(wo.o||{})},ss={...(wo.s||{})},cc={...(wo.c||{})};
+   seen.forEach(({o:x})=>{if(x.mode=='dias')ss[x.id]=c.os[x.id]===1?1:0;else{const v=c.ob[x.id];oo[x.id]=v===''||v==null?0:Math.round(+v)}
+    if(x.ctr){const v=c.oc[x.id];cc[x.id]=v===''||v==null?0:Math.round(+v)}});
+   const e={...wo};if(Object.keys(oo).length)e.o=oo;if(Object.keys(ss).length)e.s=ss;if(Object.keys(cc).length)e.c=cc;set('wk',e)}
+  set('cy',{min:c.cymin===''?0:Math.round(+c.cymin),km:c.cykm===''?0:Math.round(+c.cykm*10)/10,uni:c.cyuni?1:0});
   if(c.mood||c.emo.length){learnEmos(c.emo);set('mood',{score:c.mood||null,emo:[...c.emo],other:''})}else rm('mood');
   const tx=(c.diary||'').trim();
   if(tx)set('diary',{text:tx});else rm('diary')}
@@ -696,8 +755,8 @@ function crossView(){const v=st.xv,per=xPeriods(v),act=xActive(),vis=act.filter(
   act.forEach(S=>{const a=ds.map(d=>xVal(S.k,d)).filter(x=>x!=null);p.v[S.k]=a.length?a.reduce((x,y)=>x+y,0)/a.length:null});
   p.im={si:0,no:0,na:0};ds.forEach(d=>{const e=db.plan[d];if(e&&e.imp&&p.im[e.imp]!=null)p.im[e.imp]++})});
  st.xd=per;
- const NZ={sleep:v=>v/metaS()*100,sleepq:v=>v*10,sleepa:v=>v,med:v=>v/goals().medMin*100,food:v=>v*10,mood:v=>v*10,plan:v=>v,lost:v=>(1-Math.min(Math.max(v,0),LOST_MAX)/LOST_MAX)*100}; // % de cada serie: sueño 100 % = meta; tiempo perdido invertido (0 min = 100 %)
- const U={sleep:v=>hm(v),sleepq:v=>r1(v)+' / 10',sleepa:v=>Math.round(v)+' %',med:v=>Math.round(v)+' min',food:v=>r1(v)+' / 10',lost:v=>fmtS('lost',v),mood:v=>r1(v)+' / 10',plan:v=>Math.round(v)+' %'};
+ const NZ={sleep:v=>v/metaS()*100,sleepq:v=>v*10,sleepa:v=>v,med:v=>v/goals().medMin*100,cy:v=>v/(goals().bikeMin||60)*100,food:v=>v*10,mood:v=>v*10,plan:v=>v,lost:v=>(1-Math.min(Math.max(v,0),LOST_MAX)/LOST_MAX)*100}; // % de cada serie: sueño 100 % = meta; tiempo perdido invertido (0 min = 100 %)
+ const U={sleep:v=>hm(v),sleepq:v=>r1(v)+' / 10',sleepa:v=>Math.round(v)+' %',med:v=>Math.round(v)+' min',cy:v=>Math.round(v)+' min',food:v=>r1(v)+' / 10',lost:v=>fmtS('lost',v),mood:v=>r1(v)+' / 10',plan:v=>Math.round(v)+' %'};
  st.xu=U;
  const n=per.length,wide=n>1&&(n-1)*XSP>700;XW=wide?XL+XR+(n-1)*XSP:600;
  const H=290,T=14,B=46,X=i=>XL+(n==1?(XW-XL-XR)/2:(XW-XL-XR)*i/(n-1)),Y=p=>T+(H-T-B)*(1-p/XMAX);
@@ -724,7 +783,7 @@ function crossView(){const v=st.xv,per=xPeriods(v),act=xActive(),vis=act.filter(
   pts.forEach(q=>s+=`<circle cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="${hi?rd+1.2:rd}" fill="${S.c}" opacity="${op}"><title>${q.t} · ${S.n}: ${U[S.k](q.v)}</title></circle>`)});
  s+='</svg>';
  h+=`<div id="xwrap" style="overflow-x:auto">${s}</div><div class="xtip" id="xtip"><span class="mu">Toca o desliza sobre la gráfica para ver los valores reales de cada punto.</span></div>`;
- h+=`<p class="mu">Cada serie se muestra como % de su meta (100 % = meta). Sueño: cantidad con 100 % = ${dur(Math.round(metaS()*60))} (la escala llega a 130 %, ${hm(metaS()*1.3)}); calidad = puntaje × 10 %; promedio = (cantidad topada en 100 % + calidad) / 2. Los días sin calidad quedan sin dato en calidad y promedio. Meditación: 100 % = ${goals().medMin} min. Alimentación y ánimo: 10 / 10 = 100 %. Cumplimiento: 100 % = 100 %. Tiempo perdido va invertido: 0 min = 100 % (arriba) y ${LOST_MAX/60} h o más = 0 %.</p>`;
+ h+=`<p class="mu">Cada serie se muestra como % de su meta (100 % = meta). Sueño: cantidad con 100 % = ${dur(Math.round(metaS()*60))} (la escala llega a 130 %, ${hm(metaS()*1.3)}); calidad = puntaje × 10 %; promedio = (cantidad topada en 100 % + calidad) / 2. Los días sin calidad quedan sin dato en calidad y promedio. Meditación: 100 % = ${goals().medMin} min. Cicla: 100 % = ${goals().bikeMin} min. Alimentación y ánimo: 10 / 10 = 100 %. Cumplimiento: 100 % = 100 %. Tiempo perdido va invertido: 0 min = 100 % (arriba) y ${LOST_MAX/60} h o más = 0 %.</p>`;
  h+=`<p class="mu">Fila “Imp.”: <b style="color:#2f9e44">✓</b> si hiciste lo más importante del día, <b style="color:#e03131">✗</b> si no lo hiciste, y vacío si no tenías nada importante.${v=='weeks'||v=='month'?' En semanas y meses se cuenta cuántos ✓ y ✗ hubo.':''}</p></div>`;
  return h}
 function xTip(ev){const sv=document.getElementById('xsvg'),per=st.xd;if(!sv||!per||!per.length)return;
@@ -737,7 +796,7 @@ function xTip(ev){const sv=document.getElementById('xsvg'),per=st.xd;if(!sv||!pe
 /* =====================================================================
    METAS (cfg_goals): tarjeta en la pestaña Sueño
    ===================================================================== */
-const GR={sleepH:[7,12,'La meta de sueño debe estar entre 7 y 12 horas.'],medMin:[1,240,'La meta de meditación debe estar entre 1 y 240 minutos.'],lateMin:[0,180,'Los minutos de tolerancia deben estar entre 0 y 180.'],lowSleepH:[3,12,'Las horas de una noche corta deben estar entre 3 y 12.'],lowSleepRun:[1,7,'Las noches seguidas deben estar entre 1 y 7.']};
+const GR={bikeMin:[5,600,'La meta de cicla debe estar entre 5 y 600 minutos.'],sleepH:[7,12,'La meta de sueño debe estar entre 7 y 12 horas.'],medMin:[1,240,'La meta de meditación debe estar entre 1 y 240 minutos.'],lateMin:[0,180,'Los minutos de tolerancia deben estar entre 0 y 180.'],lowSleepH:[3,12,'Las horas de una noche corta deben estar entre 3 y 12.'],lowSleepRun:[1,7,'Las noches seguidas deben estar entre 1 y 7.']};
 function goalSet(k,v){const r=GR[k],n=+v;if(v===''||!isFinite(n)||n<r[0]||n>r[1]){alert(r[2]);return render()}
  const g={...goals()};g[k]=(k=='sleepH'||k=='lowSleepH')?Math.round(n*4)/4:Math.round(n);
  db.cfg.goals=g;persist();window.cloud&&cloud.save('cfg','goals',g);render()}
@@ -746,34 +805,199 @@ function goalsCard(){const g=goals();
  +`<details><summary>Otras metas y alertas</summary><div class="row"><label>Meditación (min al día)<input type="number" inputmode="numeric" min="1" value="${g.medMin}" onchange="goalSet('medMin',this.value)"></label><label>Trasnochada: más de (min)<input type="number" inputmode="numeric" min="0" value="${g.lateMin}" onchange="goalSet('lateMin',this.value)"></label></div><div class="row"><label>Noche corta: menos de (h)<input type="number" inputmode="decimal" step="0.25" value="${g.lowSleepH}" onchange="goalSet('lowSleepH',this.value)"></label><label>Avisar tras (noches seguidas)<input type="number" inputmode="numeric" min="1" value="${g.lowSleepRun}" onchange="goalSet('lowSleepRun',this.value)"></label></div></details></div>`}
 
 /* =====================================================================
-   METAS SEMANALES (cfg_week) y registro diario wk_AAAA-MM-DD → {m:{idMeta:minutos}}
+   PESTAÑA METAS
    ===================================================================== */
 const WK_DEF=[{id:'g1',n:'Precálculo',cat:'cole',type:'min',target:600},{id:'g2',n:'Entrenamiento',cat:'ejer',type:'min',target:480},{id:'g3',n:'Negocio',cat:'',type:'dias',target:3}];
+/* cfg_week y wk.m (metas semanales antiguas) ya no se editan, pero se siguen leyendo para el historial y la exportación */
 const weekGoals=()=>{const c=db.cfg&&db.cfg.week;return(c&&Array.isArray(c.items))?c.items.filter(x=>x&&x.id&&x.n).slice(0,3):WK_DEF.map(x=>({...x}))};
 const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
-function wkSum(g,days){let m=0,n=0;days.forEach(x=>{const r=db.wk[x],v=r&&r.m?+r.m[g.id]||0:0;m+=v;if(v>0)n++});return g.type=='dias'?n:m}
-function wkSave(items){db.cfg.week={items:items.slice(0,3)};persist();window.cloud&&cloud.save('cfg','week',db.cfg.week);render()}
-function wkToggle(){st.wkEdit=!st.wkEdit;render()}
-function wkSet(i,k,v){const L=weekGoals().map(x=>({...x})),g=L[i];if(!g)return;
- if(k=='n'){v=String(v).trim();if(!v){alert('El nombre no puede quedar vacío.');return render()}}
- if(k=='target'){v=Math.round(+v);if(!(v>=1)){alert('El objetivo debe ser 1 o más.');return render()}}
- g[k]=v;wkSave(L)}
-function wkCat(i,el){if(el.value=='__new'){openCats();return}wkSet(i,'cat',el.value)}
-function wkAdd(){const L=weekGoals().map(x=>({...x}));if(L.length>=3)return;L.push({id:'g'+Date.now().toString(36),n:'Nueva meta',cat:'',type:'min',target:60});wkSave(L)}
-function wkDel(i){const L=weekGoals().map(x=>({...x}));if(!L[i]||!confirm('¿Quitar la meta “'+L[i].n+'”? Los minutos ya registrados no se borran.'))return;L.splice(i,1);wkSave(L)}
-function wkEditor(){const L=weekGoals(),cl=catList();
- let h='<h3>Editar metas</h3>';
- L.forEach((g,i)=>{h+=`<div class="gr"><label style="margin-top:0">Nombre<input type="text" maxlength="30" value="${qa(g.n)}" onchange="wkSet(${i},'n',this.value)"></label><div class="row"><label>Categoría del calendario<select onchange="wkCat(${i},this)"><option value="">Sin categoría</option>${cl.map(c=>`<option value="${qa(c.id)}"${g.cat==c.id?' selected':''}>${esc(c.n)}</option>`).join('')}<option value="__new">＋ Crear categoría nueva…</option></select></label><label>Tipo<select onchange="wkSet(${i},'type',this.value)"><option value="min"${g.type!='dias'?' selected':''}>Minutos por semana</option><option value="dias"${g.type=='dias'?' selected':''}>Días por semana</option></select></label><label>Objetivo (${g.type=='dias'?'días':'minutos'})<input type="number" inputmode="numeric" min="1" value="${g.target}" onchange="wkSet(${i},'target',this.value)"></label></div><div class="acts"><button type="button" class="btn" onclick="wkDel(${i})">Quitar meta</button></div></div>`});
- if(L.length<3)h+=`<div class="acts"><button type="button" class="btn" onclick="wkAdd()">+ Agregar meta (máx. 3)</button></div>`;
+
+/* =====================================================================
+   METAS GRANDES Y OBJETIVOS — un solo documento cfg_metas = {items:[{id,n,col,start,end,total,arch,objs:[{id,n,col,mode,start,end,target,cat,dif,hito,ctr,done}]}]}
+   Registro diario en wk_AAAA-MM-DD: o:{idObjetivo:min} (hrs) · s:{idObjetivo:1|0} (dias) · c:{idObjetivo:n} (contador) · m (antiguo, solo lectura)
+   El progreso NUNCA se guarda: se calcula a partir de los registros diarios.
+   ===================================================================== */
+const PAL8=['#4c6ef5','#2f9e44','#e8590c','#d6336c','#0c8599','#ae3ec9','#f08c00','#7d8a97'];
+const HEX=/^#[0-9a-f]{6}$/i,okD=s=>typeof s=='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s);
+const dd=(a,b)=>Math.round((P(b)-P(a))/864e5); // días de a hasta b
+const newId=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+const metasRaw=()=>{const c=db.cfg&&db.cfg.metas;return c&&Array.isArray(c.items)?c.items:[]};
+const metasList=()=>metasRaw().filter(m=>m&&m.id&&m.n&&okD(m.start)&&okD(m.end)).map(m=>({...m,objs:(Array.isArray(m.objs)?m.objs:[]).filter(o=>o&&o.id&&o.n&&okD(o.start)&&okD(o.end))}));
+const objCol=o=>HEX.test(o.col||'')?o.col:'#7d8a97';
+const objTarget=o=>Math.max(0,+o.target||0);
+const objUnits=(o,raw)=>o.mode=='dias'?raw:raw/60; // hrs: minutos → horas · dias: días
+function objVal(o,d){const r=db.wk[d];if(!r)return 0;
+ if(o.mode=='dias'){if(r.s&&r.s[o.id]!=null)return +r.s[o.id]==1?1:0;return r.m&&+r.m[o.id]>0?1:0}
+ if(r.o&&r.o[o.id]!=null)return Math.max(0,+r.o[o.id]||0);
+ return r.m&&r.m[o.id]!=null?Math.max(0,+r.m[o.id]||0):0}
+function objDoneBetween(o,a,b){let t=0;for(const d in db.wk)if(okD(d)&&d>=a&&d<=b)t+=objVal(o,d);return t}
+const objDone=(o,upTo)=>objUnits(o,objDoneBetween(o,o.start,upTo||'9999-12-31')); // horas hechas o días con Sí
+const objPct=o=>o.done?1:(objTarget(o)?Math.min(1,objDone(o)/objTarget(o)):0);
+const objActive=(o,d)=>!o.done&&o.start<=d&&d<=o.end;
+const fmtQ=(o,x)=>o.mode=='dias'?r1(x)+(r1(x)==1?' día':' días'):dur(Math.round(x*60));
+/* semanas (lunes a domingo) que quedan hasta el final del objetivo, mínimo 1 */
+function weeksLeft(o,ref){const a=ref<o.start?o.start:ref,e=o.end<a?a:o.end;return Math.max(1,Math.round(dd(mon(a),mon(e))/7)+1)}
+const objPace=(o,ref)=>Math.max(0,objTarget(o)-objDone(o))/weeksLeft(o,ref||TODAY); // ritmo semanal recalculado: nunca negativo
+const paceTxt=(o,p)=>o.mode=='dias'?r1(p)+' d/sem':dur(Math.round(p*60))+'/sem';
+function objExpected(o,d){const n=dd(o.start,o.end)+1,e=Math.min(n,Math.max(0,dd(o.start,d)+1));return objTarget(o)*e/n}
+function objState(o){const T=objTarget(o),dn=objDone(o);
+ if(o.done)return{k:'done',t:'dominado'};
+ if(TODAY<o.start)return{k:'wait',t:'empieza el '+fs(o.start)};
+ if(T>0&&dn>=T)return{k:'done',t:'completo'};
+ if(TODAY>o.end)return{k:'over',t:'vencido, faltan '+fmtQ(o,Math.max(0,T-dn))};
+ const diff=dn-objExpected(o,TODAY),tol=Math.max(T*0.05,o.mode=='dias'?0.5:0.25);
+ if(diff>tol)return{k:'ahead',t:'adelantado'};
+ if(diff<-tol)return{k:'late',t:'atrasado '+fmtQ(o,-diff)};
+ return{k:'ok',t:'al día'}}
+function metaStats(m){let h=0,th=0,pace=0;
+ m.objs.forEach(o=>{if(o.mode=='dias')return;h+=objDone(o);th+=objTarget(o);if(objActive(o,TODAY))pace+=objPace(o)});
+ const auto=!(+m.total>0),tot=auto?th:+m.total;return{h,tot,auto,pct:tot?Math.round(h/tot*100):0,pace}}
+function activeObjs(d){const o=[];metasList().forEach(m=>{if(m.arch)return;m.objs.forEach(x=>{if(objActive(x,d))o.push({m,o:x})})});
+ return o.sort((a,b)=>a.o.end<b.o.end?-1:a.o.end>b.o.end?1:a.o.n.localeCompare(b.o.n))}
+function metasSave(items){db.cfg.metas={items};persist();window.cloud&&cloud.save('cfg','metas',db.cfg.metas);render()}
+function metasMut(fn){const items=JSON.parse(JSON.stringify(metasRaw()));fn(items);metasSave(items)}
+
+/* ---- Barra de la meta grande: línea de tiempo, cada objetivo con su color y su tramo ---- */
+function metaBar(m){
+ let a=m.start,b=m.end;m.objs.forEach(o=>{if(o.start<a)a=o.start;if(o.end>b)b=o.end});
+ const N=dd(a,b)+1;if(!(N>=1))return'';
+ const W=360,top=16,os=[...m.objs].sort((p,q)=>p.start<q.start?-1:p.start>q.start?1:(p.end<q.end?-1:p.end>q.end?1:0));
+ const ends=[],lane={};os.forEach(o=>{let k=ends.findIndex(e=>e<o.start);if(k<0){k=ends.length;ends.push(o.end)}else ends[k]=o.end;lane[o.id]=k});
+ const nl=Math.max(1,ends.length),H=Math.max(30,nl*14),lh=H/nl,X=i=>W*i/N;
+ const cov=new Array(N).fill(0);os.forEach(o=>{for(let i=dd(a,o.start);i<=dd(a,o.end);i++)cov[i]++});
+ let s=`<svg viewBox="0 0 ${W} ${top+H+16}" class="mb" role="img" aria-label="Línea de tiempo de la meta ${qa(m.n)}">`,gap=false,i=0;
+ s+=`<rect x="0" y="${top}" width="${W}" height="${H}" rx="3" style="fill:none;stroke:var(--bd)"/>`;
+ while(i<N){if(cov[i]){i++;continue}let j=i;while(j<N&&!cov[j])j++;gap=true;
+  s+=`<rect x="${X(i).toFixed(1)}" y="${top}" width="${(X(j)-X(i)).toFixed(1)}" height="${H}" style="fill:var(--mu);opacity:.22"><title>Sin planear: ${fs(add(a,i))} – ${fs(add(a,j-1))}</title></rect>`;
+  if(X(j)-X(i)>60)s+=`<text x="${((X(i)+X(j))/2).toFixed(1)}" y="${top+H/2+4}" text-anchor="middle" style="font-size:11px;fill:var(--mu)">sin planear</text>`;i=j}
+ os.forEach(o=>{const c=objCol(o),i0=dd(a,o.start),n=dd(o.start,o.end)+1,x=X(i0),w=X(i0+n)-x,p=objPct(o);
+  let mx=1;for(let k=i0;k<i0+n;k++)if(cov[k]>mx)mx=cov[k];
+  const y=mx>1?top+lane[o.id]*lh:top,h=mx>1?lh:H;
+  s+=`<g><title>${esc(o.n)}: ${Math.round(p*100)} %</title><rect x="${x.toFixed(1)}" y="${y}" width="${w.toFixed(1)}" height="${h}" fill="${c}" opacity=".28"/><rect x="${x.toFixed(1)}" y="${y}" width="${(w*p).toFixed(1)}" height="${h}" fill="${c}"/><rect x="${x.toFixed(1)}" y="${y}" width="${w.toFixed(1)}" height="${h}" fill="none" style="stroke:var(--cd)" stroke-width="1.5"/></g>`});
+ if(TODAY>=a&&TODAY<=b){const tx=X(dd(a,TODAY)+.5);
+  s+=`<line x1="${tx.toFixed(1)}" x2="${tx.toFixed(1)}" y1="${top-4}" y2="${top+H+3}" style="stroke:var(--tx)" stroke-width="2"/><text x="${Math.max(14,Math.min(W-14,tx)).toFixed(1)}" y="11" text-anchor="middle" style="font-size:12px;font-weight:700;fill:var(--tx)">hoy</text>`}
+ s+=`<text x="0" y="${top+H+13}" style="font-size:11px;fill:var(--mu)">${fs(a)}</text><text x="${W}" y="${top+H+13}" text-anchor="end" style="font-size:11px;fill:var(--mu)">${fs(b)}</text></svg>`;
+ return s+(gap?'<span class="lg"><i style="background:var(--mu);opacity:.35"></i>sin planear</span>':'')}
+
+/* ---- Lista de metas ---- */
+function objBlock(m,o){const c=objCol(o),T=objTarget(o),dn=objDone(o),s=objState(o),key=m.id+'|'+o.id,sel=st.gSel==key;
+ const av=r1(dn)+' de '+r1(T)+(o.mode=='dias'?' días':' h'),pc=['done','over','wait'].includes(s.k)?'':' · ritmo '+paceTxt(o,objPace(o));
+ let h=`<button type="button" class="ob${sel?' on':''}" style="--oc:${c}" onclick="gSel('${m.id}','${o.id}')" aria-expanded="${sel}"><span class="on1"><b>${esc(o.n)}</b> <small>${fs(o.start)} – ${fs(o.end)}</small></span><span class="on2">${av}${pc} · <span class="st-${s.k}">${esc(s.t)}</span></span>${o.hito?`<span class="on2">Hito: ${esc(o.hito)}</span>`:''}</button>`;
+ const a=`'${m.id}','${o.id}'`;
+ if(sel){const info=[o.mode=='dias'?'Registro Sí/No por día':'Registro en minutos',o.cat?'Categoría: '+esc(catOf(o.cat).n):'',o.dif?'Dificultad '+o.dif+'/3':'',o.ctr?'Contador: '+esc(o.ctr):''].filter(Boolean).join(' · ');
+  h+=`<div class="obp"><p class="mu" style="margin:0 0 8px">${info}</p><div class="chips" style="margin:0"><button type="button" class="btn" onclick="gEditObj(${a})">Editar</button><button type="button" class="btn" onclick="gDone(${a})">${o.done?'Reabrir':'Marcar dominado'}</button><button type="button" class="btn" onclick="gExt(${a})">+7 días</button><button type="button" class="btn" onclick="gDelObj(${a})">Borrar</button></div></div>`}
+ else if(s.k=='over'&&!(st.gLeft&&st.gLeft[o.id]))h+=`<div class="obp"><p class="mu" style="margin:0 0 8px">Vencido, ¿qué hago?</p><div class="chips" style="margin:0"><button type="button" class="btn" onclick="gExt(${a})">Extender +7 días</button><button type="button" class="btn" onclick="gDone(${a})">Marcar dominado</button><button type="button" class="btn" onclick="gLeave('${o.id}')">Dejarlo</button></div></div>`;
  return h}
-function weekCard(ref,edit){const w=weekDays(ref),ds=w.filter(x=>x<=TODAY),g=weekGoals();
+function metaCard(m){const ms=metaStats(m),c=HEX.test(m.col||'')?m.col:PAL8[0],os=[...m.objs].sort((a,b)=>a.start<b.start?-1:a.start>b.start?1:0);
+ let h=`<div class="card" style="border-top:4px solid ${c}"><div class="dh2"><div><strong>${esc(m.n)}</strong><div class="mu">${fs(m.start)} – ${fs(m.end)} ${P(m.end).getFullYear()}</div></div><div class="chips" style="margin:0"><button type="button" class="btn" onclick="gEditMeta('${m.id}')">Editar</button><button type="button" class="btn" onclick="gArch('${m.id}')">${m.arch?'Reactivar':'Archivar'}</button></div></div>`;
+ h+=`<p style="margin:10px 0 0"><b>${dur(Math.round(ms.h*60))}</b> / ${ms.tot?dur(Math.round(ms.tot*60)):'—'}${ms.tot?' · '+ms.pct+' %':' · sin horas fijadas'}${ms.auto&&ms.tot?' <span class="mu">(suma de los objetivos)</span>':''}${ms.pace>0?'<br><span class="mu">Ritmo semanal de los objetivos de horas: '+dur(Math.round(ms.pace*60))+'</span>':''}</p>`;
+ h+=metaBar(m)+os.map(o=>objBlock(m,o)).join('');
+ if(!os.length)h+='<p class="mu" style="margin:8px 0 0">Aún no hay objetivos. Añádelos poco a poco.</p>';
+ return h+`<div class="acts"><button type="button" class="btn pri" onclick="gNewObj('${m.id}')">Nuevo objetivo</button></div></div>`}
+function goalsView(){let h='';if(st.gf)h+=gForm();
+ const L=metasList(),act=L.filter(m=>!m.arch).sort((a,b)=>a.end<b.end?-1:a.end>b.end?1:0),arch=L.filter(m=>m.arch);
+ const used=new Set(L.flatMap(m=>m.objs.map(o=>o.id))),oldOk=weekGoals().some(g=>!used.has(g.id))&&!!((db.cfg&&db.cfg.week)||Object.values(db.wk).some(r=>r&&r.m));
+ h+=`<div class="card"><div class="dh2"><h3 style="margin:0">Mis metas</h3><button type="button" class="btn pri" onclick="gNewMeta()">Nueva meta</button></div><p class="mu" style="margin:8px 0 0">Una meta grande se divide en objetivos pequeños por fechas. Puedes añadir los objetivos poco a poco.</p>${oldOk?'<div class="acts"><button type="button" class="btn" onclick="gImportOld()">Crear objetivos desde mis metas semanales antiguas</button></div>':''}</div>`;
+ if(!L.length)h+='<div class="card"><p class="mu" style="margin:0">Aún no tienes metas. Crea una con “Nueva meta”.</p></div>';
+ act.forEach(m=>h+=metaCard(m));
+ if(arch.length)h+=`<details${st.gArchOpen?' open':''} ontoggle="st.gArchOpen=this.open"><summary>Archivadas (${arch.length})</summary>${arch.map(metaCard).join('')}</details>`;
+ return h+cyPanel()+`<div class="card">${catsPanel()}</div>`}
+function gSel(mid,oid){const k=mid+'|'+oid;st.gSel=st.gSel==k?null:k;render()}
+function gLeave(id){(st.gLeft=st.gLeft||{})[id]=1;render()}
+function gArch(mid){metasMut(it=>{const m=it.find(x=>x.id==mid);if(m){if(m.arch)delete m.arch;else m.arch=1}})}
+function gDone(mid,oid){metasMut(it=>{const m=it.find(x=>x.id==mid),o=m&&(m.objs||[]).find(x=>x.id==oid);if(o){if(o.done)delete o.done;else o.done=1}})}
+function gExt(mid,oid){metasMut(it=>{const m=it.find(x=>x.id==mid),o=m&&(m.objs||[]).find(x=>x.id==oid);if(o)o.end=add(o.end,7)})}
+function gDelObj(mid,oid){const m=metasRaw().find(x=>x.id==mid),o=m&&(m.objs||[]).find(x=>x.id==oid);if(!o||!confirm('¿Borrar el objetivo “'+o.n+'”? Los registros diarios no se borran.'))return;
+ st.gSel=null;metasMut(it=>{const mm=it.find(x=>x.id==mid);if(mm)mm.objs=(mm.objs||[]).filter(x=>x.id!=oid)})}
+
+/* ---- Formularios (meta y objetivo) ---- */
+function gScroll(){render();const e=document.getElementById('gform');if(e&&e.scrollIntoView)e.scrollIntoView({block:'start'})}
+function gNewMeta(){st.gf={k:'meta',v:{n:'',col:PAL8[metasRaw().length%8],start:TODAY,end:add(TODAY,55),total:''}};gScroll()}
+function gEditMeta(id){const m=metasRaw().find(x=>x.id==id);if(!m)return;st.gf={k:'meta',mid:id,v:{n:m.n,col:HEX.test(m.col||'')?m.col:PAL8[0],start:m.start,end:m.end,total:m.total==null?'':String(m.total)}};gScroll()}
+function gNewObj(mid){const m=metasList().find(x=>x.id==mid);if(!m)return;let s0=m.start;
+ if(m.objs.length){const mx=m.objs.reduce((a,o)=>o.end>a?o.end:a,m.start);s0=add(mx,1)>m.end?m.end:add(mx,1)}
+ st.gf={k:'obj',mid,v:{n:'',col:null,mode:'hrs',start:s0,end:add(s0,6),target:'',cat:'',dif:null,hito:'',ctr:''}};gScroll()}
+function gEditObj(mid,oid){const m=metasRaw().find(x=>x.id==mid),o=m&&(m.objs||[]).find(x=>x.id==oid);if(!o)return;
+ st.gf={k:'obj',mid,oid,v:{n:o.n,col:HEX.test(o.col||'')?o.col:null,mode:o.mode=='dias'?'dias':'hrs',start:o.start,end:o.end,target:String(o.target==null?'':o.target),cat:o.cat||'',dif:o.dif||null,hito:o.hito||'',ctr:o.ctr||''}};gScroll()}
+function gImportOld(){const used=new Set(metasList().flatMap(m=>m.objs.map(o=>o.id))),pre=weekGoals().filter(g=>!used.has(g.id)).map(g=>({...g})),s0=mon(TODAY);
+ st.gf={k:'meta',pre,v:{n:'Metas semanales (antiguas)',col:PAL8[metasRaw().length%8],start:s0,end:add(s0,55),total:''}};gScroll()}
+function gv(k,v){st.gf.v[k]=v;if(k=='start'||k=='end'||k=='target')gHint()}
+function gCol(c){st.gf.v.col=c;render()}
+function gMode(m){st.gf.v.mode=m;render()}
+function gDif(n){st.gf.v.dif=st.gf.v.dif==n?null:n;render()}
+function gCat(el){if(el.value=='__new'){openCats();return}gv('cat',el.value)}
+function gCancel(){st.gf=null;render()}
+function gHint(){const e=document.getElementById('gh'),f=st.gf;if(!e||!f||f.k!='obj')return;const v=f.v,t=parseFloat(String(v.target).replace(',','.'));
+ if(okD(v.start)&&okD(v.end)&&v.end>=v.start&&t>0){const w=Math.max(1,Math.ceil((dd(v.start,v.end)+1)/7));e.textContent=w+(w==1?' semana':' semanas')+' · ≈ '+r1(t/w)+(v.mode=='dias'?' días':' h')+' por semana'}else e.textContent=''}
+function colPick(cur){return`<div class="cr" style="flex-wrap:wrap;gap:8px">${PAL8.map(c=>`<button type="button" class="sw8${cur==c?' on':''}" style="background:${c}" aria-label="Color ${c}" onclick="gCol('${c}')"></button>`).join('')}<input type="color" value="${HEX.test(cur||'')?cur:'#7d8a97'}" aria-label="Otro color" onchange="gCol(this.value)"></div>${cur?'':'<p class="mu" style="margin:4px 0 0">Automático: se usará el siguiente color de la paleta.</p>'}`}
+function gForm(){const f=st.gf,v=f.v,isM=f.k=='meta';
+ let h=`<div class="card" id="gform"><h3 style="margin:0">${isM?(f.mid?'Editar meta':'Nueva meta'):(f.oid?'Editar objetivo':'Nuevo objetivo')}</h3>`;
+ if(!isM){const m=metasList().find(x=>x.id==f.mid);h+=`<p class="mu" style="margin:4px 0 0">Meta: ${esc(m?m.n:'')}</p>`}
+ h+=`<label>Nombre<input type="text" maxlength="40" placeholder="${isM?'Ej. Precálculo':'Ej. Capítulo 1'}" value="${qa(v.n)}" oninput="gv('n',this.value)"></label><label>Color</label>${colPick(v.col)}`;
+ h+=`<div class="row"><label>Desde<input type="date" value="${qa(v.start)}" oninput="gv('start',this.value)"></label><label>Hasta<input type="date" value="${qa(v.end)}" oninput="gv('end',this.value)"></label></div>`;
+ if(isM)h+=`<label>Horas totales que quiero lograr (opcional)<input type="number" inputmode="decimal" min="0" step="0.5" placeholder="Ej. 80" value="${qa(v.total)}" oninput="gv('total',this.value)"></label><p class="mu" style="margin:4px 0 0">Si lo dejas vacío, se usa la suma de las horas de los objetivos.</p>`;
+ else{
+  h+=`<label>¿Cómo se registra?</label><div class="seg" style="grid-template-columns:1fr 1fr"><button type="button" class="${v.mode=='hrs'?'on':''}" onclick="gMode('hrs')">Horas (se registran minutos)</button><button type="button" class="${v.mode=='dias'?'on':''}" onclick="gMode('dias')">Días (Sí / No por día)</button></div>`;
+  h+=`<label>Objetivo (${v.mode=='dias'?'días en total':'horas en total'})<input type="number" inputmode="decimal" min="0" step="${v.mode=='dias'?1:0.5}" placeholder="${v.mode=='dias'?'Ej. 24':'Ej. 8'}" value="${qa(v.target)}" oninput="gv('target',this.value)"></label><p class="mu" id="gh" style="margin:4px 0 0"></p>`;
+  h+=`<label>Categoría del calendario (opcional)<select onchange="gCat(this)"><option value="">Sin categoría</option>${catList().map(c=>`<option value="${qa(c.id)}"${v.cat==c.id?' selected':''}>${esc(c.n)}</option>`).join('')}<option value="__new">＋ Crear categoría nueva…</option></select></label>`;
+  h+=`<label>Dificultad (opcional)</label><div class="chips">${[1,2,3].map(n=>`<button type="button" class="chp${v.dif==n?' on':''}" onclick="gDif(${n})">${n}</button>`).join('')}</div>`;
+  h+=`<label>Hito (opcional)<input type="text" maxlength="60" placeholder="Ej. hasta el ejercicio 40" value="${qa(v.hito)}" oninput="gv('hito',this.value)"></label>`;
+  h+=`<label>Contador diario extra (opcional)<input type="text" maxlength="30" placeholder="Ej. Clientes nuevos" value="${qa(v.ctr)}" oninput="gv('ctr',this.value)"></label><p class="mu" style="margin:4px 0 0">Si lo escribes, el Cierre pedirá un número cada día.</p>`}
+ if(f.pre&&f.pre.length)h+=`<p class="mu">Se crearán estos objetivos con los mismos ids de tus metas semanales, para que sus minutos ya guardados sigan contando: <b>${f.pre.map(g=>esc(g.n)).join(', ')}</b>. El objetivo es el valor semanal × las semanas del periodo (se puede editar después). No se borra nada de lo antiguo.</p>`;
+ h+=`<div class="acts"><button type="button" class="btn pri" onclick="gSave()">Guardar</button><button type="button" class="btn" onclick="gCancel()">Cancelar</button>${isM&&f.mid?'<button type="button" class="btn" onclick="gDelMeta()">Borrar meta</button>':''}</div></div>`;
+ setTimeout(gHint,0);return h}
+function gDelMeta(){const f=st.gf,m=metasRaw().find(x=>x.id==f.mid);if(!m||!confirm('¿Borrar la meta “'+m.n+'” y sus objetivos? Los registros diarios no se borran.'))return;st.gf=null;metasMut(it=>{const i=it.findIndex(x=>x.id==m.id);if(i>=0)it.splice(i,1)})}
+function gSave(){const f=st.gf,v=f.v,n=String(v.n||'').trim();
+ if(!n)return alert('Escribe un nombre.');
+ if(!okD(v.start)||!okD(v.end))return alert('Elige la fecha de inicio y la de fin.');
+ if(v.end<v.start)return alert('La fecha final no puede ser anterior a la inicial.');
+ if(f.k=='meta'){const t=String(v.total).trim()===''?null:parseFloat(String(v.total).replace(',','.'));
+  if(t!=null&&!(t>=0))return alert('Las horas totales deben ser 0 o más (o déjalas vacías).');
+  metasMut(it=>{let m=it.find(x=>x.id==f.mid);
+   if(!m){m={id:newId('m'),n,col:v.col,start:v.start,end:v.end,objs:[]};
+    if(f.pre){const w=Math.max(1,Math.ceil((dd(v.start,v.end)+1)/7));
+     f.pre.forEach((g,i)=>{const d=g.type=='dias',o={id:g.id,n:g.n,col:PAL8[i%8],mode:d?'dias':'hrs',start:v.start,end:v.end,target:d?Math.round(g.target*w):Math.round(g.target/60*w*10)/10};if(g.cat)o.cat=g.cat;m.objs.push(o)})}
+    it.push(m)}
+   else{m.n=n;m.col=v.col;m.start=v.start;m.end=v.end}
+   if(t!=null&&t>0)m.total=t;else delete m.total})}
+ else{let t=parseFloat(String(v.target).replace(',','.'));
+  if(!(t>0))return alert('El objetivo debe ser un número mayor que 0.');
+  t=v.mode=='dias'?Math.max(1,Math.round(t)):Math.round(t*100)/100;
+  metasMut(it=>{const m=it.find(x=>x.id==f.mid);if(!m)return;m.objs=m.objs||[];let o=m.objs.find(x=>x.id==f.oid);
+   if(!o){o={id:newId('o')};m.objs.push(o)}
+   Object.assign(o,{n,col:HEX.test(v.col||'')?v.col:PAL8[(m.objs.length-1)%8],mode:v.mode,start:v.start,end:v.end,target:t});
+   const opt=(k,x)=>{if(x)o[k]=x;else delete o[k]};opt('cat',v.cat);opt('dif',v.dif);opt('hito',String(v.hito||'').trim());opt('ctr',String(v.ctr||'').trim())})}
+ st.gf=null;render()}
+
+/* ---- Cicla: panel en Metas (registro en cy_AAAA-MM-DD → {min,km,uni}) ---- */
+function cyPanel(){const ks=Object.keys(db.cy).filter(okD),w0=mon(TODAY),m0=TODAY.slice(0,8)+'01';
+ const sm=f=>{let mi=0,km=0,n=0,u=0;ks.forEach(d=>{if(!f(d))return;const e=db.cy[d]||{},a=+e.min||0,b=+e.km||0;mi+=a;km+=b;if(a>0||b>0)n++;if(e.uni)u++});return{mi,km,n,u}};
+ const W=sm(d=>d>=w0&&d<=TODAY),M=sm(d=>d>=m0&&d<=TODAY),A=sm(()=>true);
+ const row=(l,x)=>`<tr><td>${l}</td><td>${dur(Math.round(x.mi))}</td><td>${r1(x.km)} km</td><td>${x.n}</td><td>${x.u}</td></tr>`;
+ return`<div class="card"><h3 style="margin:0">Cicla</h3><p class="mu" style="margin:4px 0 0">Registro aparte del entrenamiento: no suma a ningún objetivo.</p><div style="overflow-x:auto"><table class="tb"><tr><th></th><th>Tiempo</th><th>Distancia</th><th>Días</th><th>A la U</th></tr>${row('Esta semana',W)}${row('Este mes',M)}${row('Total',A)}</table></div><p style="margin:8px 0 0">${A.n?'Promedio por día montado: <b>'+dur(Math.round(A.mi/A.n))+'</b> y <b>'+r1(A.km/A.n)+' km</b>':'<span class="mu">Aún no hay días de cicla registrados.</span>'}</p><label>Meta diaria de cicla para Cruces (min)<input type="number" inputmode="numeric" min="5" max="600" value="${goals().bikeMin}" onchange="goalSet('bikeMin',this.value)"></label></div>`}
+
+/* ---- Tarjeta "Esta semana" ---- */
+function weekObjs(wm){const sun=add(wm,6),o=[];metasList().forEach(m=>{if(m.arch)return;m.objs.forEach(x=>{if(!x.done&&x.start<=sun&&x.end>=wm)o.push({m,o:x})})});
+ return o.sort((a,b)=>a.o.end<b.o.end?-1:a.o.end>b.o.end?1:0).slice(0,5)}
+function objWeek(o,wm){const sun=add(wm,6),a=o.start>wm?o.start:wm,before=objUnits(o,objDoneBetween(o,o.start,add(wm,-1))),inw=objUnits(o,objDoneBetween(o,a,sun));
+ return{inw,pace:Math.max(0,objTarget(o)-before)/weeksLeft(o,wm)}}
+function weekCard(ref,edit){const w=weekDays(ref),wm=w[0],ds=w.filter(x=>x<=TODAY),ob=weekObjs(wm);
  const sa=mean(ds.map(x=>val('sleep',x)).filter(v=>v!=null)),pa=mean(ds.map(x=>val('plan',x)).filter(v=>v!=null));
  const md=ds.reduce((a,x)=>a+((db.med[x]&&+db.med[x].min)||0),0),late=ds.filter(lateDay),sr=late.filter(x=>db.sleep[x].why=='sinrazon').length;
+ const cy=ds.reduce((a,x)=>{const e=db.cy[x];return e?{m:a.m+(+e.min||0),k:a.k+(+e.km||0)}:a},{m:0,k:0});
  let h=`<div class="card"><div class="dh2"><h3 style="margin:0">Esta semana</h3><span class="mu">${fs(w[0])} – ${fs(w[6])}</span></div>`;
- h+=g.length?g.map(x=>{const v=wkSum(x,ds),dias=x.type=='dias',p=Math.min(100,Math.round(v/(x.target||1)*100));
-  return`<div style="margin-top:10px"><div class="dh2"><b>${esc(x.n)}</b><span>${dias?v+' de '+x.target+' días':dur(v)+' / '+dur(x.target)}</span></div><div class="pbar"><i style="width:${p}%"></i></div></div>`}).join(''):'<p class="mu">No hay metas semanales.</p>';
- h+=`<div class="stats" style="margin-top:12px"><div class="stat"><span>Sueño medio</span><b>${sa==null?'—':hm(sa)}</b><span>meta ${hm(metaS())}</span></div><div class="stat"><span>Trasnochadas</span><b>${late.length}</b><span>${sr} sin razón</span></div><div class="stat"><span>Meditación</span><b>${dur(md)}</b><span>en la semana</span></div><div class="stat"><span>Cumplimiento medio</span><b>${pa==null?'—':Math.round(pa)+' %'}</b></div></div>`;
- if(edit)h+=`<div class="acts"><button type="button" class="btn" onclick="wkToggle()">${st.wkEdit?'Cerrar editor':'Editar metas'}</button></div>`+(st.wkEdit?wkEditor():'');
+ h+=ob.length?ob.map(({m,o})=>{const k=objCol(o),r=objWeek(o,wm),dias=o.mode=='dias',p=r.pace>0?Math.min(100,Math.round(r.inw/r.pace*100)):(r.inw>0?100:0);
+  return`<div style="margin-top:10px"><div class="dh2"><b style="text-transform:none"><i class="dotc" style="background:${k}"></i>${esc(o.n)}</b><span>${dias?r1(r.inw)+' de '+Math.ceil(r.pace-1e-9)+' días':dur(Math.round(r.inw*60))+' / '+dur(Math.round(r.pace*60))}</span></div><div class="pbar"><i style="width:${p}%;background:${k}"></i></div></div>`}).join(''):'<p class="mu" style="margin:10px 0 0">No hay objetivos activos esta semana. Puedes crearlos en la pestaña Metas.</p>';
+ h+=`<div class="stats" style="margin-top:12px"><div class="stat"><span>Sueño medio</span><b>${sa==null?'—':hm(sa)}</b><span>meta ${hm(metaS())}</span></div><div class="stat"><span>Trasnochadas</span><b>${late.length}</b><span>${sr} sin razón</span></div><div class="stat"><span>Meditación</span><b>${dur(md)}</b><span>en la semana</span></div><div class="stat"><span>Qué tanto elegí mi día</span><b>${pa==null?'—':Math.round(pa)+' %'}</b><span>promedio</span></div><div class="stat"><span>Cicla</span><b>${dur(Math.round(cy.m))}</b><span>${r1(cy.k)} km</span></div></div>`;
+ /* Lo que sí funcionó: calculado, no se guarda */
+ const it=[];let best=null;
+ ds.forEach(x=>{const v=val('sleep',x),q=db.sleep[x]&&db.sleep[x].q||0;if(v!=null&&(!best||v>best.v||(v==best.v&&q>best.q)))best={d:x,v,q}});
+ if(best&&best.v>=goals().lowSleepH)it.push('mejor sueño: '+P(best.d).toLocaleDateString('es',{weekday:'long'})+' ('+hm(best.v)+(best.q?', calidad '+best.q:'')+')');
+ const okO=ob.filter(({o})=>{const s=objState(o);return(s.k=='ok'||s.k=='ahead')&&objDone(o)>0}).map(({o})=>o.n);
+ if(okO.length)it.push('al día o adelantado: '+okO.slice(0,3).map(esc).join(', '));
+ let run=0,mx=0;ds.forEach(x=>{const e=db.sleep[x];if(e&&e.bed&&!lateDay(x)){run++;if(run>mx)mx=run}else run=0});
+ if(mx>=2)it.push('racha de '+mx+' días sin trasnochar');
+ if(it.length)h+=`<p style="margin:0"><b>Lo que sí funcionó esta semana:</b> ${it.join(' · ')}</p>`;
  return h+'</div>'}
 
 /* =====================================================================
@@ -787,7 +1011,8 @@ const XS=[
  {k:'lost',n:'Tiempo perdido (invertido)',c:'#e8590c'},
  {k:'mood',n:'Ánimo',c:'#d6336c'},
  {k:'plan',n:'Cumplimiento',c:'#0c8599'},
- {k:'med',n:'Meditación',c:'#f59f00'}
+ {k:'med',n:'Meditación',c:'#f59f00'},
+ {k:'cy',n:'Cicla',c:'#b5651d'}
 ];
 const SMODES=[['cant','Cantidad'],['cal','Calidad'],['prom','Promedio'],['amb','Ambas']];
 const sleepMode=()=>{try{const m=localStorage.getItem('bit_sleepmode');return SMODES.some(x=>x[0]==m)?m:'cant'}catch(e){return'cant'}};
@@ -799,25 +1024,26 @@ function xVal(k,d){
  if(k=='sleepq'){const e=db.sleep[d];return e&&e.q!=null?+e.q:null}
  if(k=='sleepa'){const a=val('sleep',d),e=db.sleep[d];if(a==null||!e||e.q==null)return null;return(Math.min(a/metaS()*100,100)+e.q*10)/2}
  if(k=='med'){const e=db.med[d];return e&&e.min!=null?+e.min:null}
+ if(k=='cy'){const e=db.cy[d];return e&&e.min!=null?+e.min:null}
  return val(k,d)}
-function xFirst(){let f=null;['sleep','food','lost','mood','plan','med'].forEach(k=>Object.keys(db[k]||{}).forEach(d=>{if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&d<=TODAY&&(!f||d<f)&&xVal(k,d)!=null)f=d}));return f}
+function xFirst(){let f=null;['sleep','food','lost','mood','plan','med','cy'].forEach(k=>Object.keys(db[k]||{}).forEach(d=>{if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&d<=TODAY&&(!f||d<f)&&xVal(k,d)!=null)f=d}));return f}
 
 /* =====================================================================
    EXPORTAR PARA IA y "ALGO NO VA BIEN": solo generan texto para copiar y pegar (cfg_ai.goals guarda mis metas en texto)
    ===================================================================== */
-const AI_INS='Analiza mis datos del periodo. Relaciona sueño (cantidad y calidad), alimentación, tiempo perdido, ánimo, meditación y cumplimiento; usa el diario para explicar los días difíciles; dime en qué estoy fallando, en qué días y qué sí está funcionando; propón soluciones pequeñas y concretas compatibles con mis límites (10 min diarios, nada rígido). Sé honesto y crítico, no me halagues.';
+const AI_INS='Analiza mis datos del periodo. Relaciona sueño (cantidad y calidad), alimentación, tiempo perdido, ánimo, meditación y cumplimiento; usa el diario para explicar los días difíciles; dime en qué estoy fallando, en qué días y qué sí está funcionando; propón soluciones pequeñas y concretas compatibles con mis límites (10 min diarios, nada rígido). Sé honesto y crítico, no me halagues. Aclaración sobre la columna "Cumplimiento %": este % responde a "¿qué tanto elegí mi día?" (qué tanto tomé yo las decisiones de mi día y qué tanto hice de lo que quería hacer).';
 const AI_RANGES=[['7','Últimos 7 días'],['14','Últimos 14 días'],['30','Últimos 30 días'],['mes','Mes actual'],['todo','Todo']];
 const aiGoalsTxt=()=>{const a=db.cfg&&db.cfg.ai;return a&&typeof a.goals=='string'?a.goals:''};
 const wdS=d=>P(d).toLocaleDateString('es',{weekday:'short'});
 const oneLine=t=>String(t==null?'':t).replace(/\s*\n\s*/g,' ').trim();
 const cellT=x=>x==null||x===''?'–':oneLine(x).replace(/\|/g,'/');
-function hasData(d){const p=db.plan[d];return['sleep','food','lost','mood','diary','med','wk'].some(s=>db[s][d])||!!(p&&(p.imp||p.cum!=null||p.done>0))}
+function hasData(d){const p=db.plan[d];return['sleep','food','lost','mood','diary','med','wk','cy'].some(s=>db[s][d])||!!(p&&(p.imp||p.cum!=null||p.done>0))}
 function aiDates(r){let a;
  if(r=='mes')a=TODAY.slice(0,8)+'01';
  else if(r=='todo'){a=TODAY;SECS.forEach(s=>{if(s!='cfg')Object.keys(db[s]).forEach(x=>{if(/^\d{4}-\d{2}-\d{2}$/.test(x)&&x<a)a=x})})}
  else a=add(TODAY,-(+r-1));
  const o=[];for(let d=a;d<=TODAY;d=add(d,1))o.push(d);return o}
-function aiSummary(L){const g=goals(),wg=weekGoals(),pk=f=>L.map(f).filter(v=>v!=null);
+function aiSummary(L,full){const g=goals(),pk=f=>L.map(f).filter(v=>v!=null);
  const sl=pk(d=>val('sleep',d)),qq=pk(d=>{const e=db.sleep[d];return e&&e.q!=null?+e.q:null}),fo=pk(d=>val('food',d)),lo=pk(d=>val('lost',d)),mo=pk(d=>val('mood',d)),me=pk(d=>{const e=db.med[d];return e&&e.min!=null?+e.min:null}),pl=pk(d=>val('plan',d));
  const late=L.filter(lateDay),w=k=>late.filter(d=>db.sleep[d].why==k).length,o=[];
  o.push('- Periodo: '+L[0]+' al '+L[L.length-1]+' ('+L.length+' días; '+L.filter(hasData).length+' con algún registro)');
@@ -829,26 +1055,37 @@ function aiSummary(L){const g=goals(),wg=weekGoals(),pk=f=>L.map(f).filter(v=>v!
  o.push('- Ánimo: '+(mo.length?'media '+r1(mean(mo))+' / 10':'sin datos'));
  o.push('- Meditación: '+(me.length?'total '+me.reduce((a,b)=>a+b,0)+' min; media '+Math.round(mean(me))+' min por día registrado (meta '+g.medMin+' min)':'sin datos'));
  o.push('- Cumplimiento medio: '+(pl.length?Math.round(mean(pl))+' %':'sin datos'));
- if(wg.length){const ws=[...new Set(L.map(x=>mon(x)))];
-  o.push('- Metas semanales'+(ws.length>8?' (últimas 8 semanas)':'')+':');
-  ws.slice(-8).forEach(m=>{const ds=weekDays(m).filter(x=>L.includes(x));o.push('  - Semana del '+fs(m)+' ('+ds.length+' días del periodo): '+wg.map(x=>x.n+' '+(x.type=='dias'?wkSum(x,ds)+' de '+x.target+' días':dur(wkSum(x,ds))+' / '+dur(x.target))).join(' · '))})}
+ const cyl=L.map(d=>db.cy[d]).filter(Boolean),cm=cyl.reduce((a,e)=>a+(+e.min||0),0),ck=cyl.reduce((a,e)=>a+(+e.km||0),0),cn=cyl.filter(e=>(+e.min||0)>0||(+e.km||0)>0).length;
+ o.push('- Cicla: '+(cyl.length?'total '+Math.round(cm)+' min y '+r1(ck)+' km en '+cn+' días montados; '+cyl.filter(e=>e.uni).length+' veces a la U':'sin datos'));
+ if(full)o.push(...aiObjSummary());
  return o}
-function buildAI(s){const L=aiDates(s.range),bad=s.mode=='bad',g=goals(),wg=weekGoals(),o=[];
+function aiObjSummary(){const o=[],ML=metasList();if(!ML.length)return o;o.push('- Metas grandes y objetivos (a fecha de hoy, '+TODAY+'):');
+ ML.forEach(m=>{const ms=metaStats(m);o.push('  - '+m.n+(m.arch?' (archivada)':'')+' ('+m.start+' al '+m.end+'): '+r1(ms.h)+' h / '+r1(ms.tot)+' h'+(ms.auto?' (suma de objetivos)':'')+' ('+ms.pct+' %)'+(ms.pace>0?' · ritmo semanal de los objetivos de horas: '+r1(ms.pace)+' h':''));
+  m.objs.forEach(x=>{const s=objState(x);o.push('    - '+x.n+' ('+x.start+' al '+x.end+'): '+r1(objDone(x))+' de '+r1(objTarget(x))+(x.mode=='dias'?' días':' h')+(['done','over','wait'].includes(s.k)?'':' · ritmo '+paceTxt(x,objPace(x)))+' · '+s.t)})});return o}
+function buildAI(s){const L=aiDates(s.range),bad=s.mode=='bad',g=goals(),o=[];
  o.push('# '+(bad?'Algo no va bien: análisis de mi bitácora':'Análisis de mi bitácora'));
  o.push('Periodo: '+L[0]+' al '+L[L.length-1]+' ('+L.length+' días). Generado el '+TODAY+'.','');
  o.push('## Instrucciones para la IA',AI_INS);
  if(bad)o.push('','Además responde: ¿Qué cambió respecto a las semanas anteriores? ¿Desde qué día empezó el bajón? ¿Qué patrón se repite?');
  o.push('','## Mis metas',aiGoalsTxt().trim()||'(Sin texto propio: puedes escribir tus metas en el panel antes de copiar.)','','Metas automáticas de la app:','- Sueño: '+r1(metaS())+' h por noche; trasnochada = acostarme más de '+g.lateMin+' min después de la hora ideal (según la hora de levantarme planeada).','- Meditación: '+g.medMin+' min al día.');
- wg.forEach(x=>o.push('- '+x.n+': '+x.target+(x.type=='dias'?' días por semana (cuenta los días con minutos registrados)':' min por semana')+(x.cat?' · categoría '+catOf(x.cat).n:'')));
- o.push('','## Resumen del periodo',...aiSummary(L));
+ o.push('- Cicla: referencia de '+(g.bikeMin||60)+' min por día (registro aparte del entrenamiento).');
+ {const ML=metasList().filter(m=>!m.arch);
+  if(ML.length)ML.forEach(m=>{o.push('- Meta grande «'+m.n+'»: '+m.start+' al '+m.end+(+m.total>0?', '+m.total+' h en total':''));
+   m.objs.forEach(x=>o.push('  - '+x.n+' ('+x.start+' al '+x.end+'): '+x.target+(x.mode=='dias'?' días (registro Sí/No)':' h')+(x.cat?' · categoría '+catOf(x.cat).n:'')+(x.hito?' · hito: '+oneLine(x.hito):'')+(x.dif?' · dificultad '+x.dif+'/3':'')+(x.ctr?' · contador: '+oneLine(x.ctr):'')+(x.done?' · marcado como dominado':'')))});
+  else weekGoals().forEach(x=>o.push('- '+x.n+': '+x.target+(x.type=='dias'?' días por semana':' min por semana')+(x.cat?' · categoría '+catOf(x.cat).n:'')))}
+ o.push('','## Resumen del periodo',...aiSummary(L,true));
  if(bad){const pv=[];for(let i=14;i>=1;i--)pv.push(add(L[0],-i));o.push('','## Resumen de los 14 días anteriores (para comparar)',...aiSummary(pv))}
  /* tabla por día */
  const days=L.filter(hasData);o.push('','## Tabla por día');
- if(days.length){const H=['Fecha','Día','Acostarme','Levantarme','Horas','Calidad','Motivo trasnochada','Alimentación','Perdido (min)','Ánimo','Emociones','Meditación (min)','Cumplimiento %','Lo más importante',...wg.map(x=>'Min '+x.n)];
+ const oc=[];metasList().forEach(m=>m.objs.forEach(x=>{if(L.some(d=>{const r=db.wk[d];return r&&((r.o&&r.o[x.id]!=null)||(r.s&&r.s[x.id]!=null)||(r.c&&r.c[x.id]!=null)||(r.m&&r.m[x.id]!=null))}))oc.push({m,x})}));
+ const usedIds=new Set(metasList().flatMap(m=>m.objs.map(x=>x.id))),oldG=weekGoals().filter(g2=>!usedIds.has(g2.id)&&L.some(d=>db.wk[d]&&db.wk[d].m&&db.wk[d].m[g2.id]!=null));
+ const oCell=(x,r)=>{if(!r)return null;if(x.mode=='dias'){if(r.s&&r.s[x.id]!=null)return +r.s[x.id]==1?'Sí':'No';if(r.m&&r.m[x.id]!=null)return +r.m[x.id]>0?'Sí':'No';return null}
+  if(r.o&&r.o[x.id]!=null)return r.o[x.id];return r.m&&r.m[x.id]!=null?r.m[x.id]:null};
+ if(days.length){const H=['Fecha','Día','Acostarme','Levantarme','Horas','Calidad','Motivo trasnochada','Alimentación','Perdido (min)','Ánimo','Emociones','Meditación (min)','Cumplimiento %','Lo más importante',...oc.flatMap(({m,x})=>[m.n+' · '+x.n+(x.mode=='dias'?' (Sí/No)':' (min)')].concat(x.ctr?[m.n+' · '+x.n+' – '+oneLine(x.ctr)]:[])),...oldG.map(g2=>'Min '+g2.n+' (antiguo)'),'Cicla (min)','Cicla (km)','A la U'];
   o.push('| '+H.join(' | ')+' |','|'+H.map(()=>'---').join('|')+'|');
   const WHY={evento:'evento',sinrazon:'sin razón',otro:'otro'},IMPL={si:'Sí',no:'No',na:'N/A'};
-  days.forEach(d=>{const sl=db.sleep[d]||{},mo=db.mood[d]||{},p=db.plan[d]||{},hv=val('sleep',d),cu=val('plan',d),wr=db.wk[d]&&db.wk[d].m;
-   const row=[d,wdS(d),sl.bed,sl.wake,hv==null?null:hm(hv),sl.q,lateDay(d)?(WHY[sl.why]||'(sin indicar)'):null,db.food[d]&&db.food[d].score,val('lost',d),mo.score,(mo.emo||[]).concat(mo.other?[mo.other]:[]).join(', '),db.med[d]&&db.med[d].min,cu==null?null:Math.round(cu),IMPL[p.imp],...wg.map(x=>wr&&wr[x.id]!=null?wr[x.id]:null)];
+  days.forEach(d=>{const sl=db.sleep[d]||{},mo=db.mood[d]||{},p=db.plan[d]||{},hv=val('sleep',d),cu=val('plan',d),wr=db.wk[d],cyr=db.cy[d];
+   const row=[d,wdS(d),sl.bed,sl.wake,hv==null?null:hm(hv),sl.q,lateDay(d)?(WHY[sl.why]||'(sin indicar)'):null,db.food[d]&&db.food[d].score,val('lost',d),mo.score,(mo.emo||[]).concat(mo.other?[mo.other]:[]).join(', '),db.med[d]&&db.med[d].min,cu==null?null:Math.round(cu),IMPL[p.imp],...oc.flatMap(({x})=>[oCell(x,wr)].concat(x.ctr?[wr&&wr.c&&wr.c[x.id]!=null?wr.c[x.id]:null]:[])),...oldG.map(g2=>wr&&wr.m&&wr.m[g2.id]!=null?wr.m[g2.id]:null),cyr?cyr.min:null,cyr?cyr.km:null,cyr?(cyr.uni?'Sí':'No'):null];
    o.push('| '+row.map(cellT).join(' | ')+' |')})}
  else o.push('(Sin registros en el periodo.)');
  /* notas */
@@ -889,7 +1126,7 @@ function themeLbl(){const b=$('#th');if(b)b.textContent=themeNow()=='dark'?'☀ 
 function theme(){const n=themeNow()=='dark'?'light':'dark';document.documentElement.dataset.theme=n;try{localStorage.setItem('bit_theme',n)}catch(e){}themeLbl()}
 
 /* ---------- Exportar / importar / sincronización ---------- */
-function exp(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(db)],{type:'application/json'}));a.download='bitacora-'+iso(new Date())+'.json';a.click()}
+function exp(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(db)],{type:'application/json'}));a.download='bitacora-'+iso(new Date())+'.json';a.click();try{localStorage.setItem('bit_lastexp',iso(new Date()))}catch(e){}}
 function imp(f){if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);SECS.forEach(s=>{db[s]={...db[s],...(d[s]||{})}});persist();st.cf=null;st.mf=null;render();window.cloud&&cloud.push()}catch(e){alert('El archivo no es válido.')}};r.readAsText(f)}
 function onSync(){if(st.cf&&!st.cf.dirty)st.cf=null;if(st.mf&&!st.mf.dirty)st.mf=null}
 themeLbl();
